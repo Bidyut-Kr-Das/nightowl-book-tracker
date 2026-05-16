@@ -1,256 +1,179 @@
 "use client";
 
-import { useState, useCallback } from "react";
-import { motion } from "motion/react";
-import Navbar from "@/components/navbar";
-import HeroSection from "@/components/hero-section";
-import AmbientParticles from "@/components/ambient-particles";
-import ReadingStats from "@/components/reading-stats";
-import BookShelfRow from "@/components/book-shelf-row";
-import BookDetailModal from "@/components/book-detail-modal";
-import SearchFilter from "@/components/search-filter";
-import RecentlyAdded from "@/components/recently-added";
-import BookCard from "@/components/book-card";
-import { getBooksByStatus, type Book } from "@/lib/books-data";
-import { Library } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import Image from "next/image";
+import Link from "next/link";
+import { motion, useMotionValue, useSpring, useTransform } from "motion/react";
+import { Search, X, ChevronRight } from "lucide-react";
+import {
+  books as allBooks,
+  getBooksByStatus,
+  getReadingStats,
+  type Book,
+} from "@/lib/books-data";
+import { useTheme } from "@/lib/theme-provider";
+import { PhysicalShelf, ReadingProgressCard, ShelfBook, ShelfRow } from "@/components/book-shelf-row";
 
-export default function HomePage() {
-  const [selectedBook, setSelectedBook] = useState<Book | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const [searchResults, setSearchResults] = useState<Book[]>([]);
 
-  const currentlyReading = getBooksByStatus("reading");
-  const completed = getBooksByStatus("completed");
-  const wishlist = getBooksByStatus("wishlist");
 
-  const handleSelectBook = useCallback((book: Book) => {
-    setSelectedBook(book);
-    setIsModalOpen(true);
-  }, []);
+/* ════════════════════════════════
+   MAIN DASHBOARD PAGE
+   A warm bookshelf experience
+   ════════════════════════════════ */
+export default function DashboardPage() {
+  const { setTheme } = useTheme();
 
-  const handleCloseModal = useCallback(() => {
-    setIsModalOpen(false);
-    // Delay clearing book for exit animation
-    setTimeout(() => setSelectedBook(null), 350);
-  }, []);
+  // useEffect(() => {
+  //   setTheme("light");
+  // }, [setTheme]);
 
-  const handleSearchResults = useCallback((books: Book[]) => {
-    setSearchResults(books);
-  }, []);
+  const stats = useMemo(() => getReadingStats(), []);
+  const currentlyReading = useMemo(() => getBooksByStatus("reading"), []);
+  const completed = useMemo(() => getBooksByStatus("completed"), []);
+  const wishlist = useMemo(() => getBooksByStatus("wishlist"), []);
 
-  // Wrap entire landing page in .dark scope so it always renders
-  // in dark mode regardless of global theme — no useEffect flash
+  // Search
+  const [query, setQuery] = useState("");
+  const searchResults = useMemo(() => {
+    if (!query.trim()) return [];
+    const q = query.toLowerCase();
+    return allBooks.filter(
+      (b) =>
+        b.title.toLowerCase().includes(q) ||
+        b.author.toLowerCase().includes(q) ||
+        b.genres.some((g) => g.toLowerCase().includes(q))
+    );
+  }, [query]);
+
+  const showSearch = query.trim().length > 0;
+
   return (
-    <div className="dark bg-background text-foreground min-h-screen">
-      <AmbientParticles />
-      <Navbar onSearchToggle={() => setIsSearchOpen((prev) => !prev)} />
+    <div className="max-w-5xl mx-auto">
+      {/* Page header — warm greeting */}
+      <motion.div
+        className="mb-8 md:mb-10"
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, ease: [0.23, 1, 0.32, 1] }}
+      >
+        <h1 className="text-3xl md:text-4xl font-semibold tracking-tight font-(family-name:--font-dynapuff)">
+          My Bookshelf
+        </h1>
+        <p className="text-muted-foreground mt-1 text-sm">
+          {stats.totalBooks} books · {stats.totalPagesRead.toLocaleString()} pages read
+        </p>
+      </motion.div>
 
-      <main className="relative z-10">
-        {/* Hero */}
-        <HeroSection />
-
-        {/* Content area */}
-        <div className="max-w-7xl mx-auto px-5 md:px-8 pb-32">
-          {/* Search & Filter */}
-          <motion.div
-            className="mb-12"
-            id="library"
-            initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5 }}
-          >
-            <SearchFilter
-              onResultsChange={handleSearchResults}
-              isOpen={isSearchOpen}
-              onToggle={() => setIsSearchOpen((prev) => !prev)}
-            />
-          </motion.div>
-
-          {/* Search results — shown when filters are active */}
-          {isSearchOpen && searchResults.length > 0 && (
-            <motion.section
-              className="mb-16"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4, ease: [0.23, 1, 0.32, 1] }}
+      {/* Search bar — minimal, sits above shelves */}
+      <motion.div
+        className="mb-8 md:mb-10"
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1, duration: 0.4, ease: [0.23, 1, 0.32, 1] }}
+      >
+        <div className="flex items-center gap-2.5 h-11 px-4 rounded-xl bg-muted/50 border border-border focus-within:border-primary/30 focus-within:ring-2 focus-within:ring-primary/8 transition-all duration-200 max-w-md">
+          <Search size={15} className="text-muted-foreground shrink-0" />
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search your library..."
+            className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground/50"
+          />
+          {query && (
+            <button
+              onClick={() => setQuery("")}
+              className="text-muted-foreground hover:text-foreground transition-colors active:scale-90"
             >
-              <div className="flex items-center gap-3 mb-6">
-                <Library size={18} className="text-lamp/60" />
-                <h2 className="text-xl font-light tracking-tight font-[family-name:var(--font-display)]">
-                  Search Results
-                </h2>
-              </div>
-              <div className="flex flex-wrap gap-6 md:gap-8">
+              <X size={14} />
+            </button>
+          )}
+        </div>
+      </motion.div>
+
+      {/* Search results overlay */}
+      {showSearch && (
+        <motion.section
+          className="mb-12"
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, ease: [0.23, 1, 0.32, 1] }}
+        >
+          <div className="flex items-baseline justify-between mb-5">
+            <h2 className="text-xl font-semibold tracking-tight font-(family-name:--font-dynapuff)">
+              Search results
+            </h2>
+            <span className="text-xs text-muted-foreground">
+              {searchResults.length} found
+            </span>
+          </div>
+          {searchResults.length > 0 ? (
+            <div className="relative">
+              <div
+                className="flex items-end gap-4 md:gap-5 pb-1 overflow-x-auto scrollbar-none"
+                style={{ scrollbarWidth: "none" }}
+              >
                 {searchResults.map((book, i) => (
-                  <BookCard
-                    key={book.id}
-                    book={book}
-                    index={i}
-                    onSelect={handleSelectBook}
-                    size="md"
-                  />
+                  <ShelfBook key={book.id} book={book} index={i} size="md" />
+                ))}
+              </div>
+              <PhysicalShelf />
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              No books match "{query}"
+            </p>
+          )}
+        </motion.section>
+      )}
+
+      {/* Shelves — only when not searching */}
+      {!showSearch && (
+        <>
+          {/* Currently Reading — hero shelf, large covers */}
+          <ShelfRow
+            title="Currently reading"
+            books={currentlyReading}
+            bookSize="lg"
+            delay={0.15}
+          />
+
+          {/* Reading Progress — compact sidebar-style list */}
+          {currentlyReading.length > 0 && (
+            <motion.section
+              className="mb-12 md:mb-16"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.25, duration: 0.5 }}
+            >
+              <h2 className="text-lg font-semibold tracking-tight font-(family-name:--font-dynapuff) mb-4">
+                Reading progress
+              </h2>
+              <div className="paper-card divide-y divide-border overflow-hidden">
+                {currentlyReading.map((book) => (
+                  <ReadingProgressCard key={book.id} book={book} />
                 ))}
               </div>
             </motion.section>
           )}
 
-          {/* Reading Stats */}
-          <motion.div
-            className="mb-16"
-            initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1 }}
-            viewport={{ once: true, margin: "-50px" }}
-          >
-            <ReadingStats />
-          </motion.div>
+          {/* Wishlist / Next Up */}
+          <ShelfRow
+            title="Next up"
+            books={wishlist}
+            bookSize="md"
+            delay={0.3}
+          />
 
-          {/* Currently Reading Shelf */}
-          <div className="mb-16" id="reading">
-            <BookShelfRow
-              title="Currently Reading"
-              subtitle={`${currentlyReading.length} books in progress`}
-              books={currentlyReading}
-              onSelectBook={handleSelectBook}
-              bookSize="lg"
-            />
-          </div>
-
-          {/* Completed Shelf */}
-          <div className="mb-16" id="completed">
-            <BookShelfRow
-              title="Completed"
-              subtitle={`${completed.length} books finished`}
-              books={completed}
-              onSelectBook={handleSelectBook}
-              bookSize="md"
-            />
-          </div>
-
-          {/* Wishlist Shelf */}
-          <div className="mb-16" id="wishlist">
-            <BookShelfRow
-              title="Wishlist"
-              subtitle={`${wishlist.length} books waiting`}
-              books={wishlist}
-              onSelectBook={handleSelectBook}
-              bookSize="md"
-            />
-          </div>
-
-          {/* Two-column: Recently Added + Reading Progress Detail */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 mb-16">
-            {/* Recently Added */}
-            <RecentlyAdded onSelectBook={handleSelectBook} />
-
-            {/* Reading Progress Detail */}
-            <motion.section
-              initial={{ opacity: 0 }}
-              whileInView={{ opacity: 1 }}
-              viewport={{ once: true, margin: "-50px" }}
-              transition={{ duration: 0.6 }}
-            >
-              <div className="flex items-baseline gap-3 mb-5">
-                <h2 className="text-2xl md:text-3xl font-light tracking-tight font-[family-name:var(--font-display)]">
-                  Reading Progress
-                </h2>
-                <div className="flex-1 h-px bg-border ml-4 hidden sm:block" />
-              </div>
-
-              <div className="space-y-5">
-                {currentlyReading.map((book, i) => (
-                  <motion.div
-                    key={book.id}
-                    className="relative rounded-xl p-4 cursor-pointer group"
-                    style={{
-                      background: "oklch(1 0 0 / 3%)",
-                      border: "1px solid oklch(1 0 0 / 5%)",
-                    }}
-                    initial={{ opacity: 0, y: 10 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    transition={{
-                      delay: i * 0.1,
-                      duration: 0.4,
-                      ease: [0.23, 1, 0.32, 1],
-                    }}
-                    whileHover={{
-                      y: -2,
-                      transition: { duration: 0.2 },
-                    }}
-                    whileTap={{ scale: 0.99 }}
-                    onClick={() => handleSelectBook(book)}
-                  >
-                    <div className="flex items-center justify-between mb-3">
-                      <div>
-                        <p className="text-sm font-medium group-hover:text-lamp transition-colors">
-                          {book.title}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {book.author}
-                        </p>
-                      </div>
-                      <span className="text-2xl font-light font-[family-name:var(--font-display)] text-lamp">
-                        {book.progress}%
-                      </span>
-                    </div>
-
-                    {/* Progress bar */}
-                    <div className="h-1.5 rounded-full bg-white/5 overflow-hidden">
-                      <motion.div
-                        className="h-full rounded-full"
-                        style={{
-                          background:
-                            "linear-gradient(90deg, oklch(0.82 0.12 70), oklch(0.72 0.15 40))",
-                        }}
-                        initial={{ width: 0 }}
-                        whileInView={{
-                          width: `${book.progress}%`,
-                        }}
-                        viewport={{ once: true }}
-                        transition={{
-                          delay: 0.3 + i * 0.15,
-                          duration: 1,
-                          ease: [0.23, 1, 0.32, 1],
-                        }}
-                      />
-                    </div>
-
-                    <div className="flex items-center justify-between mt-2">
-                      <span className="text-[11px] text-muted-foreground/60">
-                        Page {book.currentPage} of {book.totalPages}
-                      </span>
-                      <span className="text-[11px] text-muted-foreground/60">
-                        ~{Math.ceil(((book.totalPages! - book.currentPage!) / 30))} days left
-                      </span>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
-            </motion.section>
-          </div>
-        </div>
-
-        {/* Footer */}
-        <footer className="border-t border-border py-12">
-          <div className="max-w-7xl mx-auto px-5 md:px-8 text-center">
-            <p className="text-sm text-muted-foreground/50">
-              <span className="font-[family-name:var(--font-display)] text-base">
-                NightOwl
-              </span>{" "}
-              — crafted for readers who love beautiful things
-            </p>
-          </div>
-        </footer>
-      </main>
-
-      {/* Book Detail Modal */}
-      <BookDetailModal
-        book={selectedBook}
-        isOpen={isModalOpen}
-        onClose={handleCloseModal}
-      />
+          {/* Completed / Finished */}
+          <ShelfRow
+            title="Finished"
+            books={completed}
+            bookSize="md"
+            delay={0.4}
+          />
+        </>
+      )}
     </div>
   );
 }

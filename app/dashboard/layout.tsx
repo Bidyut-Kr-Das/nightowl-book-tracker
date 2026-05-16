@@ -17,6 +17,7 @@ import {
   X,
   Pause,
   Home,
+  Search,
 } from "lucide-react";
 
 const navItems = [
@@ -135,6 +136,25 @@ export default function DashboardLayout({
               </Link>
             );
           })}
+
+          <div className="px-2 py-4 text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
+            Discover
+          </div>
+          <Link
+            href="/dashboard/search"
+            className={`
+              flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm
+              transition-all duration-200 active:scale-[0.98]
+              ${
+                pathname === "/dashboard/search"
+                  ? "bg-primary/10 text-primary font-medium"
+                  : "text-muted-foreground hover:text-foreground hover:bg-accent"
+              }
+            `}
+          >
+            <Search size={18} strokeWidth={pathname === "/dashboard/search" ? 2.2 : 1.8} />
+            <span>Search</span>
+          </Link>
 
           <div className="px-2 py-4 text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
             Navigate
