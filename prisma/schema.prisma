@@ -1,0 +1,175 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+
+
+model Book {
+  id                String      @id @default(cuid())
+
+  // External API reference
+  hardcoverId       Int?        @unique
+
+  // Core metadata
+  title             String
+  subtitle          String?
+  slug              String?     @unique
+  description       String?
+  headline          String?
+
+  // Publishing
+  releaseDate       DateTime?
+  releaseYear       Int?
+  pages             Int?
+
+  // Media
+  coverImage        String?
+  headerImage       String?
+
+  // Ratings
+  averageRating     Float?
+  ratingsCount      Int         @default(0)
+  reviewsCount      Int         @default(0)
+
+  // Engagement
+  usersCount        Int         @default(0)
+  usersReadCount    Int         @default(0)
+
+  // Categorization
+  bookCategoryId    Int?
+  literaryTypeId    Int?
+  compilation       Boolean     @default(false)
+
+  // Extra metadata
+  tags              String[]
+  links             Json?
+
+  // Relations
+  authors           BookAuthor[]
+  series            BookSeries[]
+  reviews           Review[]
+  shelves           UserBook[]
+
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+
+  @@index([title])
+  @@index([slug])
+  @@index([hardcoverId])
+}
+
+model Author {
+  id          String       @id @default(cuid())
+
+  hardcoverId Int?         @unique
+
+  name        String
+  bio         String?
+  image       String?
+
+  books       BookAuthor[]
+
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+model BookAuthor {
+  id          String    @id @default(cuid())
+
+  bookId      String
+  authorId    String
+  role        String?   // Author, Editor, Narrator
+
+  book        Book      @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  author      Author    @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@unique([bookId, authorId])
+}
+
+model Series {
+  id            String       @id @default(cuid())
+
+  hardcoverId   Int?         @unique
+
+  name          String
+  description   String?
+
+  books         BookSeries[]
+
+  createdAt     DateTime     @default(now())
+}
+
+model BookSeries {
+  id            String      @id @default(cuid())
+
+  bookId        String
+  seriesId      String
+
+  position      Float?
+
+  book          Book        @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  series        Series      @relation(fields: [seriesId], references: [id], onDelete: Cascade)
+
+  @@unique([bookId, seriesId])
+}
+
+model Review {
+  id            String      @id @default(cuid())
+
+  userId        String
+  bookId        String
+
+  rating        Float
+  review        String?
+
+  spoiler       Boolean     @default(false)
+
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  book          Book        @relation(fields: [bookId], references: [id], onDelete: Cascade)
+
+  @@index([bookId])
+  @@index([userId])
+}
+
+model UserBook {
+  id            String      @id @default(cuid())
+
+  userId        String
+  bookId        String
+
+  status        ReadingStatus
+  progress      Int?        // current page
+
+  startedAt     DateTime?
+  finishedAt    DateTime?
+
+  rating        Float?
+
+  book          Book        @relation(fields: [bookId], references: [id], onDelete: Cascade)
+
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@unique([userId, bookId])
+  @@index([status])
+}
+
+enum ReadingStatus {
+  WANT_TO_READ
+  READING
+  COMPLETED
+  ON_HOLD
+  DROPPED
+}
