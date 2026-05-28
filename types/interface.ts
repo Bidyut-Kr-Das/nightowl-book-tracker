@@ -51,6 +51,10 @@ export type HardcoverBook = {
     author: {
       id: number;
       name: string;
+      image:{
+        url:string
+      };
+      bio:string
     };
   }[];
 

@@ -33,7 +33,7 @@ model Book {
   mood        String[]  @default([])
 
   // Media
-  coverImage  String?
+  coverImage String?
   // headerImage String?
 
   // Ratings
@@ -74,6 +74,8 @@ model Author {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([hardcoverId])
 }
 
 model Series {
@@ -88,6 +90,8 @@ model Series {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([hardcoverId])
 }
 
 model Review {
@@ -131,19 +135,23 @@ model UserBook {
   updatedAt DateTime @updatedAt
 
   @@unique([userId, bookId])
+  @@index([userId, bookId])
   @@index([status])
 }
 
 model User {
   id Int @id @default(autoincrement())
 
-  name  String
-  email String @unique
+  name        String
+  email       String @unique
+  clerkUserId String @unique
 
   shelves UserBook[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([clerkUserId])
 }
 
 enum ReadingStatus {

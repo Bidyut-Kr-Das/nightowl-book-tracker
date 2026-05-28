@@ -8,6 +8,7 @@ import {
   useRef,
   createContext,
 } from "react";
+import { useSearchParams } from "next/navigation";
 import { motion, AnimatePresence, useSpring } from "motion/react";
 import Image from "next/image";
 import {
@@ -762,17 +763,42 @@ export const SearchModeContext = createContext<SearchMode>("library");
    ═══════════════════════════════════════════════ */
 export default function SearchPage() {
   const inputRef = useRef<HTMLInputElement>(null);
-  const [query, setQuery] = useState("");
+  const searchParams = useSearchParams();
+
+  // ── Initialize state from URL search params (restores on back-nav) ──
+  const [query, setQuery] = useState(
+    () => searchParams.get("q") || "",
+  );
   const [statusFilter, setStatusFilter] = useState<ReadingStatus | null>(null);
   const [groupMode, setGroupMode] = useState<GroupMode>("none");
   const [filtersExpanded, setFiltersExpanded] = useState(false);
 
-  // ── Dual-mode state ──
-  const [searchMode, setSearchMode] = useState<SearchMode>("library");
-  const [storeFilter, setStoreFilter] = useState<StoreFilterType>("name");
+  // ── Dual-mode state — restored from URL params ──
+  const [searchMode, setSearchMode] = useState<SearchMode>(
+    () => (searchParams.get("mode") as SearchMode) || "library",
+  );
+  const [storeFilter, setStoreFilter] = useState<StoreFilterType>(
+    () => (searchParams.get("filter") as StoreFilterType) || "name",
+  );
 
   // ── Debounced query via hook ──
   const debouncedQuery = useDebounce(query, 550);
+
+  // ── Sync search state to URL params (lightweight, no re-render) ──
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (searchMode !== "library") params.set("mode", searchMode);
+    if (searchMode === "store" && storeFilter !== "name")
+      params.set("filter", storeFilter);
+    if (query) params.set("q", query);
+
+    const paramStr = params.toString();
+    const newUrl = paramStr
+      ? `${window.location.pathname}?${paramStr}`
+      : window.location.pathname;
+
+    window.history.replaceState(null, "", newUrl);
+  }, [searchMode, storeFilter, query]);
   // ── Zustand store ──
   const {
     books: allBooks,

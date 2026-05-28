@@ -74,3 +74,42 @@ export const SUGGEST_AUTHORS = gql`
     }
   }
 `;
+
+export const GET_BOOKS_BY_IDS = gql`
+  query BooksByIds($bookIds: [Int!]!) {
+    books(where: { id: { _in: $bookIds } }) {
+      id
+      slug
+      title
+      subtitle
+      description
+      headline
+      release_date
+      pages
+      image {
+        url
+      }
+      cached_tags
+      rating
+      ratings_count
+      reviews_count
+      contributions {
+        author {
+          id
+          name
+          image {
+            url
+          }
+          bio
+        }
+      }
+      book_series {
+        series {
+          id
+          name
+          description
+        }
+      }
+    }
+  }
+`;

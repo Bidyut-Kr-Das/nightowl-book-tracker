@@ -3,6 +3,7 @@ import { Cormorant_Garamond, DynaPuff, Source_Sans_3 } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 import { ThemeProvider } from "@/lib/theme-provider";
+import { ClerkProvider } from "@clerk/nextjs";
 
 const displayFont = Cormorant_Garamond({
   subsets: ["latin"],
@@ -49,7 +50,9 @@ export default function RootLayout({
       data-scroll-behavior="smooth"
     >
       <body className="min-h-full flex flex-col overflow-hidden">
-        <ThemeProvider>{children}</ThemeProvider>
+        <ClerkProvider>
+          <ThemeProvider>{children}</ThemeProvider>
+        </ClerkProvider>
       </body>
     </html>
   );

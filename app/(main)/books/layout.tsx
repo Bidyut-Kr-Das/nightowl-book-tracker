@@ -1,4 +1,4 @@
-import DashboardLayout from "@/app/dashboard/layout";
+import DashboardLayout from "@/app/(main)/dashboard/layout";
 
 export default function BooksLayout({
   children,

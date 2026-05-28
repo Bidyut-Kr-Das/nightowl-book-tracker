@@ -2,22 +2,28 @@
 
 import {
   GET_AUTHOR_DETAILS,
+  GET_BOOKS_BY_IDS,
   SEARCH_BOOKS_BY_AUTHOR_QUERY,
   SEARCH_BOOKS_QUERY,
   SUGGEST_AUTHORS,
 } from "@/constants/hardcover-gql-queries";
-import { Author } from "@/lib/generated/prisma/client";
+import { Author, ReadingStatus } from "@/lib/generated/prisma/client";
 import { hardCoverClient } from "@/lib/hardcover-client";
 import { prisma } from "@/prisma/prisma";
 import { HardcoverBooksResponse, IBook } from "@/types/interface";
 import { mapBooksResponse } from "@/utils/bookUtils";
+import { currentUser } from "@clerk/nextjs/server";
 import { gql } from "graphql-request";
 
 export async function getAllBooks() {
   try {
+    const user = await currentUser();
+    if (!user) {
+      throw new Error("user not authenticated");
+    }
     const result = await prisma.userBook.findMany({
       where: {
-        userId: undefined,
+        userId: Number(user.externalId),
       },
       include: {
         book: {
@@ -105,9 +111,9 @@ export async function searchBookStore(
               averageRating: b.rating,
               ratingsCount: b.ratings_count,
               coverImage: b.image?.url || null,
-              genres: b.cached_tags["Genre"].map((t) => t.tag),
+              genres: b.cached_tags["Genre"]?.map((t) => t.tag),
               reviewsCount: b.reviews_count,
-              tags: b.cached_tags["Tag"].map((t) => t.tag),
+              tags: b.cached_tags["Tag"]?.map((t) => t.tag),
               slug: b.slug,
             }) as IBook,
         );
@@ -208,5 +214,142 @@ export async function checkAuthorName(query: string) {
   } catch (error) {
     console.error(error);
     throw new Error("Error while checking for author name");
+  }
+}
+
+export async function addBookToLibraryAction(hardCoverBookIds: number[]) {
+  try {
+    const session = await currentUser();
+    if (!session) {
+      throw new Error("user not authenticated");
+    }
+    //step 1: CHECK OUR DB IF THE BOOK IS AVAILABLE BASED ON HARDCOVER ID
+    const uniqueSets = new Set(hardCoverBookIds);
+
+    const db_books = await prisma.book.findMany({
+      where: {
+        hardcoverId: {
+          in: [...uniqueSets],
+        },
+      },
+      select: {
+        id: true,
+        hardcoverId: true,
+      },
+    });
+
+    //remove all the hardcover ids already present in the db
+    for (const book of db_books) {
+      if (book.hardcoverId) uniqueSets.delete(book.hardcoverId);
+    }
+
+    //get all the unavailable books
+    const response = await hardCoverClient.request<HardcoverBooksResponse>(
+      GET_BOOKS_BY_IDS,
+      {
+        bookIds: [...uniqueSets],
+      },
+    );
+
+    // for each new books create an entry and connect or create to existing series and authors.
+    if (response.books.length) {
+      const createdBooks = await Promise.all(
+        response.books.map((b) => {
+          return prisma.book.create({
+            data: {
+              hardcoverId: b.id,
+              title: b.title,
+              subtitle: b.subtitle,
+              description: b.description,
+              headline: b.headline,
+              releaseDate: new Date(b.release_date || "17-05-2026"),
+              pages: b.pages,
+              authors: {
+                connectOrCreate: b.contributions.map((c) => ({
+                  where: {
+                    hardcoverId: c.author.id,
+                  },
+                  create: {
+                    name: c.author.name,
+                    image: c.author.image ? c.author.image.url : null,
+                    hardcoverId: c.author.id,
+                    bio: c.author.bio,
+                  },
+                })),
+              },
+              series: {
+                connectOrCreate: b.book_series.map((bs) => ({
+                  where: {
+                    hardcoverId: bs.series.id,
+                  },
+                  create: {
+                    hardcoverId: bs.series.id,
+                    description: bs.series.description,
+                    name: bs.series.name,
+                  },
+                })),
+              },
+              averageRating: Number(b.rating?.toFixed(1)),
+              ratingsCount: b.ratings_count,
+              coverImage: b.image?.url || null,
+              genres: b.cached_tags["Genre"]?.map((t: any) => t.tag),
+              reviewsCount: b.reviews_count,
+              tags: b.cached_tags["Tag"]?.map((t: any) => t.tag),
+              slug: b.slug,
+            },
+            select: {
+              hardcoverId: true,
+              id: true,
+            },
+          });
+        }),
+      );
+
+      //combine with all the old books and new books
+      const new_entries = [...db_books, ...createdBooks];
+
+      //create userbook entries for each new book connection
+      const res = await prisma.userBook.createManyAndReturn({
+        data: new_entries.map((e) => ({
+          userId: Number(session.externalId),
+          bookId: e.id,
+          status: ReadingStatus.WANT_TO_READ,
+        })),
+        include: {
+          book: {
+            include: {
+              series: {
+                select: {
+                  name: true,
+                  hardcoverId: true,
+                  description: true,
+                },
+              },
+              authors: {
+                select: {
+                  name: true,
+                  image: true,
+                  hardcoverId: true,
+                },
+              },
+            },
+          },
+        },
+      });
+
+      const normalised: IBook[] = res.map((ub) => {
+        return {
+          ...ub.book,
+          addedAt: ub.createdAt,
+          progress: ub.progress,
+          status: ub.status,
+        };
+      });
+
+      return normalised;
+      // return res;
+    }
+  } catch (error) {
+    console.error("Error While fetching books by id", error);
   }
 }

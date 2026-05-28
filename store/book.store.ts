@@ -1,7 +1,11 @@
 import { books as dummyBooks } from "@/lib/books-data";
 import { Author } from "@/lib/generated/prisma/client";
 import { ReadingStatus } from "@/lib/generated/prisma/enums";
-import { getAllBooks, searchBookStore } from "@/server/book.action";
+import {
+  addBookToLibraryAction,
+  getAllBooks,
+  searchBookStore,
+} from "@/server/book.action";
 import { IBook } from "@/types/interface";
 import { create } from "zustand";
 
@@ -22,7 +26,7 @@ export type BookState = {
 };
 
 const initialState: BookState = {
-  books: dummyBooks,
+  books: [],
   authors: [],
   loading: false,
   error: null,
@@ -36,6 +40,8 @@ type BookActions = {
   browseStoreBooks: ({ query }: { query: string }) => Promise<void>;
   browseStoreAuthors: ({ query }: { query: string }) => Promise<void>;
   browseStoreSeries: ({ query }: { query: string }) => Promise<void>;
+
+  addBookToLibrary: ({}: { hardCoverBookId: number }) => Promise<void>;
 
   getAllLibraryBooks: () => Promise<void>;
 };
@@ -108,6 +114,18 @@ export const useBookStore = create<BookStore>((set) => ({
   browseStoreSeries: async ({ query }) => {
     //work in progress
     // set({});
+  },
+
+  addBookToLibrary: async ({ hardCoverBookId }) => {
+    // set({ loading: true });
+    const res = await addBookToLibraryAction([hardCoverBookId]);
+    if(!res){
+      return 
+    }
+    set((state) => ({
+      ...state,
+      books: [...state.books, ...res],
+    }));
   },
 
   getBooksByStatus: (status: ReadingStatus) => {},

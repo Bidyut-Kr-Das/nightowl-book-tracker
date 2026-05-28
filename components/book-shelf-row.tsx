@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { motion, useMotionValue, useSpring } from "motion/react";
 import { IBook } from "@/types/interface";
-import { SearchModeContext } from "@/app/dashboard/search/page";
+import { SearchModeContext } from "@/app/(main)/dashboard/search/page";
 // import {
 //   type Book
 // } from "@/lib/books-data";

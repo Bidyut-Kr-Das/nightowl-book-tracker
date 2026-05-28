@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { motion, useMotionValue, useSpring } from "motion/react";
+import { toast } from "sonner";
 import {
   ArrowLeft,
   ArrowUpRight,
@@ -85,7 +86,7 @@ export default function BookDetailPage({
   const mode = searchParams.get("mode");
   const router = useRouter();
   const { setTheme } = useTheme();
-  const { books, relevant_books } = useBookStore();
+  const { books, relevant_books, addBookToLibrary } = useBookStore();
 
   // useEffect(() => {
   //   setTheme("light");
@@ -153,6 +154,20 @@ export default function BookDetailPage({
   function handleCoverMouseLeave() {
     rotateY.set(0);
     rotateX.set(0);
+  }
+
+  function performAction(): void {
+    if (book && mode === "store")
+      toast.promise(
+        addBookToLibrary({
+          hardCoverBookId: book.id ? Number(book.id) : Number(book.hardcoverId),
+        }),
+        {
+          loading: "Adding the book to library",
+          success: "Book added to library Successfully",
+          error: "Something went wrong",
+        },
+      );
   }
 
   return (
@@ -305,14 +320,14 @@ export default function BookDetailPage({
                   key={i}
                   size={16}
                   className={
-                    i < book.averageRating!
+                    i+1 < book.averageRating!
                       ? "text-amber-400 fill-amber-400"
                       : "text-muted-foreground/15"
                   }
                 />
               ))}
               <span className="text-sm text-muted-foreground ml-1">
-                {book.averageRating}.0
+                {book.averageRating}
               </span>
             </motion.div>
           )}
@@ -325,7 +340,10 @@ export default function BookDetailPage({
             transition={{ delay: 0.4, duration: 0.4, ease: [0.23, 1, 0.32, 1] }}
           >
             {/* Primary CTA */}
-            <button className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-foreground text-background text-sm font-medium hover:bg-foreground/90 transition-all duration-200 active:scale-95">
+            <button
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-foreground text-background text-sm font-medium hover:bg-foreground/90 transition-all duration-200 active:scale-95"
+              onClick={performAction}
+            >
               {statusLabels[book.status] ?? "Add to Library"}
               <ArrowUpRight size={14} />
             </button>
