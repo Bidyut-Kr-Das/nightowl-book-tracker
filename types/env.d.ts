@@ -4,6 +4,7 @@
 declare namespace NodeJS {
   interface ProcessEnv {
     DATABASE_URL: string;
+    HARDCOVER_API_URL: string;
 
     // Allow other environment variables
     [key: string]: string | undefined;

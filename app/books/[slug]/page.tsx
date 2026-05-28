@@ -1,7 +1,7 @@
 "use client";
 
 import { use, useEffect, useMemo } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { motion, useMotionValue, useSpring } from "motion/react";
@@ -19,8 +19,13 @@ import {
   Share2,
   Star,
 } from "lucide-react";
-import { getBookById, books, type Book } from "@/lib/books-data";
+// import { getBookById, books, type Book } from "@/lib/books-data";
 import { useTheme } from "@/lib/theme-provider";
+import { IBook } from "@/types/interface";
+import { getBookById, getBookBySlug } from "@/utils/bookUtils";
+import { useBookStore } from "@/store/book.store";
+import { ReadingStatus } from "@/lib/generated/prisma/enums";
+import { format } from "date-fns";
 
 const statusLabels: Record<string, string> = {
   reading: "Continue reading",
@@ -39,7 +44,7 @@ const statusDescriptions: Record<string, string> = {
 /* ════════════════════════════════
    RELATED BOOK — horizontal card
    ════════════════════════════════ */
-function RelatedBook({ book }: { book: Book }) {
+function RelatedBook({ book }: { book: IBook }) {
   return (
     <Link
       href={`/books/${book.id}`}
@@ -47,8 +52,8 @@ function RelatedBook({ book }: { book: Book }) {
     >
       <div className="relative w-11 h-16 rounded-[3px] overflow-hidden shrink-0 book-shadow">
         <Image
-          src={book.coverImage}
-          alt={book.title}
+          src={book.coverImage || "/placeholder-cover.png"}
+          alt={`${book.title} by ${book.authors.join(", ")}`}
           fill
           className="object-cover"
           sizes="44px"
@@ -59,7 +64,7 @@ function RelatedBook({ book }: { book: Book }) {
           {book.title}
         </p>
         <p className="text-xs text-muted-foreground truncate mt-0.5">
-          {book.author}
+          {book.authors.join(", ")}
         </p>
       </div>
     </Link>
@@ -73,17 +78,25 @@ function RelatedBook({ book }: { book: Book }) {
 export default function BookDetailPage({
   params,
 }: {
-  params: Promise<{ id: string }>;
+  params: Promise<{ slug: string }>;
 }) {
-  const { id } = use(params);
+  const { slug } = use(params);
+  const searchParams = useSearchParams();
+  const mode = searchParams.get("mode");
   const router = useRouter();
   const { setTheme } = useTheme();
+  const { books, relevant_books } = useBookStore();
 
-  useEffect(() => {
-    setTheme("light");
-  }, [setTheme]);
+  // useEffect(() => {
+  //   setTheme("light");
+  // }, [setTheme]);
 
-  const book = getBookById(Number(id));
+  const book = getBookBySlug({
+    books: mode === "store" ? relevant_books : books,
+    slug,
+  });
+
+  console.log("book", book);
 
   // Spring tilt for cover — decorative mouse tracking
   const rotateY = useSpring(0, { stiffness: 120, damping: 18 });
@@ -121,11 +134,11 @@ export default function BookDetailPage({
     );
   }
 
-  const pagesLeft =
-    book.totalPages && book.currentPage
-      ? book.totalPages - book.currentPage
-      : null;
-  const daysLeft = pagesLeft ? Math.ceil(pagesLeft / 30) : null;
+  // const pagesLeft =
+  //   book.pages && book.currentPage
+  //     ? book.pages - book.currentPage
+  //     : null;
+  // const daysLeft = pagesLeft ? Math.ceil(pagesLeft / 30) : null;
 
   function handleCoverMouseMove(e: React.MouseEvent<HTMLDivElement>) {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -144,7 +157,7 @@ export default function BookDetailPage({
 
   return (
     <div className="max-w-4xl mx-auto">
-      <div className="absolute w-[calc(100%-0.5rem)] -z-10 left-2 right-2 top-1/2 lg:top-[45%] bg-(--background-secondary) h-screen"></div>
+      <div className="absolute w-[calc(100%-0.5rem)] -z-10 left-2 right-2 top-[35%] lg:top-[35%] bg-(--background-secondary) h-screen"></div>
       {/* Back navigation */}
       <motion.div
         className="mb-8 md:mb-10"
@@ -188,12 +201,13 @@ export default function BookDetailPage({
               }}
             >
               <Image
-                src={book.coverImage}
-                alt={book.title}
+                src={book.coverImage || "/placeholder-cover.png"}
+                alt={`${book.title} by ${book.authors.join(", ")}`}
                 fill
                 className="object-cover"
                 sizes="260px"
                 priority
+                loading="eager"
               />
               {/* Spine edge */}
               <div
@@ -227,7 +241,7 @@ export default function BookDetailPage({
         {/* Title + meta — editorial style */}
         <div className="flex-1 min-w-0 flex flex-col justify-center">
           {/* Series badge */}
-          {book.series && (
+          {book.series && book.series.length > 0 && (
             <motion.div
               className="mb-3"
               initial={{ opacity: 0 }}
@@ -236,8 +250,8 @@ export default function BookDetailPage({
             >
               <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground uppercase tracking-wider font-medium">
                 <Layers size={11} />
-                {book.series}
-                {book.seriesOrder && ` · Book ${book.seriesOrder}`}
+                {book.series[0].name}
+                {/* {book.seriesOrder && ` · Book ${book.seriesOrder}`} */}
               </span>
             </motion.div>
           )}
@@ -263,11 +277,11 @@ export default function BookDetailPage({
             animate={{ opacity: 1 }}
             transition={{ delay: 0.25 }}
           >
-            {book.author}
+            {book.authors.map((a) => a.name).join(", ")}
           </motion.p>
 
           {/* Tagline / description snippet */}
-          {book.description && (
+          {/* {book.description && (
             <motion.p
               className="text-sm text-muted-foreground/70 mt-3 leading-relaxed italic max-w-md font-(family-name:--font-display)"
               initial={{ opacity: 0 }}
@@ -276,10 +290,10 @@ export default function BookDetailPage({
             >
               {book.description}
             </motion.p>
-          )}
+          )} */}
 
           {/* Rating */}
-          {book.rating && (
+          {book.averageRating && (
             <motion.div
               className="flex items-center gap-1.5 mt-4"
               initial={{ opacity: 0 }}
@@ -291,14 +305,14 @@ export default function BookDetailPage({
                   key={i}
                   size={16}
                   className={
-                    i < book.rating!
+                    i < book.averageRating!
                       ? "text-amber-400 fill-amber-400"
                       : "text-muted-foreground/15"
                   }
                 />
               ))}
               <span className="text-sm text-muted-foreground ml-1">
-                {book.rating}.0
+                {book.averageRating}.0
               </span>
             </motion.div>
           )}
@@ -312,7 +326,7 @@ export default function BookDetailPage({
           >
             {/* Primary CTA */}
             <button className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-foreground text-background text-sm font-medium hover:bg-foreground/90 transition-all duration-200 active:scale-95">
-              {statusLabels[book.status]}
+              {statusLabels[book.status] ?? "Add to Library"}
               <ArrowUpRight size={14} />
             </button>
 
@@ -334,7 +348,7 @@ export default function BookDetailPage({
       </div>
 
       {/* Reading Progress — prominent for reading books */}
-      {book.progress !== undefined && book.status === "reading" && (
+      {/* {book.progress !== undefined && book.status === ReadingStatus.READING && (
         <motion.div
           className="mb-12 md:mb-16"
           initial={{ opacity: 0, y: 8 }}
@@ -368,7 +382,7 @@ export default function BookDetailPage({
             {daysLeft && <span>~{daysLeft} days left</span>}
           </div>
         </motion.div>
-      )}
+      )} */}
 
       {/* ═══ Divider ═══ */}
       <div className="border-t border-border mb-10 md:mb-14" />
@@ -400,7 +414,7 @@ export default function BookDetailPage({
             {book.genres.map((g) => (
               <span
                 key={g}
-                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-muted text-xs text-muted-foreground font-medium"
+                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-muted mix-blend-multiply text-xs text-muted-foreground font-medium"
               >
                 <Hash size={10} />
                 {g}
@@ -412,12 +426,12 @@ export default function BookDetailPage({
         {/* Metadata — right sidebar */}
         <div className="md:col-span-2 space-y-6">
           {/* Pages */}
-          {book.totalPages && (
+          {book.pages && (
             <div>
               <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium mb-1">
                 Pages
               </p>
-              <p className="text-sm font-medium">{book.totalPages} pages</p>
+              <p className="text-sm font-medium">{book.pages} pages</p>
             </div>
           )}
 
@@ -426,17 +440,23 @@ export default function BookDetailPage({
             <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium mb-1">
               Published
             </p>
-            <p className="text-sm font-medium">{book.publishedYear}</p>
+            {book.releaseDate ? (
+              <p className="text-sm font-medium">
+                {format(book.releaseDate, "MMMM d, yyyy")}
+              </p>
+            ) : (
+              <p className="text-sm font-medium">Information unavailable</p>
+            )}
           </div>
 
           {/* Started */}
-          {book.dateStarted && (
+          {book.addedAt && (
             <div>
               <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium mb-1">
                 Started
               </p>
               <p className="text-sm font-medium">
-                {new Date(book.dateStarted).toLocaleDateString("en-US", {
+                {new Date(book.addedAt).toLocaleDateString("en-US", {
                   month: "long",
                   day: "numeric",
                   year: "numeric",
@@ -446,7 +466,7 @@ export default function BookDetailPage({
           )}
 
           {/* Finished */}
-          {book.dateFinished && (
+          {/* {book.dateFinished && (
             <div>
               <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium mb-1">
                 Finished
@@ -459,7 +479,7 @@ export default function BookDetailPage({
                 })}
               </p>
             </div>
-          )}
+          )} */}
 
           {/* Status */}
           <div>
@@ -483,7 +503,7 @@ export default function BookDetailPage({
         <h2 className="text-lg font-semibold font-(family-name:--font-dynapuff) mb-4">
           Notes & Highlights
         </h2>
-        <div className="py-10 text-center border border-dashed border-border rounded-xl">
+        <div className="py-10 text-center border border-dashed border-border rounded-xl bg-(--background-secondary)">
           <Bookmark
             size={24}
             className="text-muted-foreground/25 mx-auto mb-3"

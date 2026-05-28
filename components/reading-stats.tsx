@@ -2,10 +2,13 @@
 
 import { motion } from "motion/react";
 import { BookOpen, CheckCircle, Clock, Flame, TrendingUp } from "lucide-react";
-import { getReadingStats } from "@/lib/books-data";
+import { getReadingStats } from "@/utils/bookUtils";
+import { useBookStore } from "@/store/book.store";
+// import { getReadingStats } from "@/lib/books-data";
 
 export default function ReadingStats() {
-  const stats = getReadingStats();
+  const { books } = useBookStore();
+  const stats = getReadingStats({ books });
 
   const statItems = [
     {
@@ -75,7 +78,7 @@ export default function ReadingStats() {
             transition: { duration: 0.2, ease: [0.23, 1, 0.32, 1] },
           }}
         >
-          {/* Background glow */}
+          {/* Background glow */} 
           <div
             className="absolute top-0 right-0 w-24 h-24 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
             style={{
@@ -91,7 +94,7 @@ export default function ReadingStats() {
           </div>
 
           <p
-            className="text-2xl md:text-3xl font-light tracking-tight font-[family-name:var(--font-display)]"
+            className="text-2xl md:text-3xl font-light tracking-tight font-(family-name:--font-display)"
             style={{ color: item.color }}
           >
             {item.value}

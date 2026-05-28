@@ -2,11 +2,18 @@
 
 import { motion } from "motion/react";
 import Image from "next/image";
-import { getBooksByStatus } from "@/lib/books-data";
+// import { getBooksByStatus } from "@/lib/books-data";
 import { BookOpen, ArrowDown } from "lucide-react";
+import { useBookStore } from "@/store/book.store";
+import { getBooksByStatus } from "@/utils/bookUtils";
+import { ReadingStatus } from "@/lib/generated/prisma/browser";
 
 export default function HeroSection() {
-  const currentlyReading = getBooksByStatus("reading");
+  const { books } = useBookStore();
+  const currentlyReading = getBooksByStatus({
+    books,
+    status: ReadingStatus.READING,
+  });
   const displayBooks = currentlyReading.slice(0, 3);
 
   return (
@@ -14,7 +21,7 @@ export default function HeroSection() {
       {/* Ambient background gradients */}
       <div className="absolute inset-0 pointer-events-none">
         <div
-          className="absolute top-[15%] left-[10%] w-[500px] h-[500px] rounded-full opacity-30"
+          className="absolute top-[15%] left-[10%] w-125 h-125 rounded-full opacity-30"
           style={{
             background:
               "radial-gradient(circle, oklch(0.82 0.12 70 / 8%), transparent 70%)",
@@ -22,7 +29,7 @@ export default function HeroSection() {
           }}
         />
         <div
-          className="absolute bottom-[20%] right-[15%] w-[400px] h-[400px] rounded-full opacity-20"
+          className="absolute bottom-[20%] right-[15%] w-100 h-100 rounded-full opacity-20"
           style={{
             background:
               "radial-gradient(circle, oklch(0.72 0.15 40 / 10%), transparent 70%)",
@@ -51,7 +58,7 @@ export default function HeroSection() {
 
         {/* Headline */}
         <motion.h1
-          className="text-5xl md:text-7xl lg:text-8xl font-light tracking-tight leading-[0.95] font-[family-name:var(--font-display)]"
+          className="text-5xl md:text-7xl lg:text-8xl font-light tracking-tight leading-[0.95] font-(family-name:--font-display)"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.35, duration: 0.7, ease: [0.23, 1, 0.32, 1] }}
@@ -78,8 +85,8 @@ export default function HeroSection() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.5, duration: 0.6, ease: [0.23, 1, 0.32, 1] }}
         >
-          Track your reading journey in a space that feels like home.
-          Cozy, immersive, and thoughtfully crafted.
+          Track your reading journey in a space that feels like home. Cozy,
+          immersive, and thoughtfully crafted.
         </motion.p>
 
         {/* Animated bookshelf preview — 3 books */}
@@ -99,7 +106,11 @@ export default function HeroSection() {
               key={book.id}
               className="relative"
               variants={{
-                hidden: { opacity: 0, y: 40, rotateZ: i === 1 ? 0 : i === 0 ? -3 : 3 },
+                hidden: {
+                  opacity: 0,
+                  y: 40,
+                  rotateZ: i === 1 ? 0 : i === 0 ? -3 : 3,
+                },
                 visible: {
                   opacity: 1,
                   y: 0,
@@ -119,8 +130,8 @@ export default function HeroSection() {
               <div
                 className={`relative overflow-hidden rounded-sm ${
                   i === 1
-                    ? "w-[140px] h-[210px] md:w-[180px] md:h-[270px]"
-                    : "w-[110px] h-[165px] md:w-[140px] md:h-[210px]"
+                    ? "w-35 h-52.5 md:w-45 md:h-67.5"
+                    : "w-27.5 h-41.25 md:w-35 md:h-52.5"
                 }`}
                 style={{
                   boxShadow:
@@ -130,7 +141,7 @@ export default function HeroSection() {
                 }}
               >
                 <Image
-                  src={book.coverImage}
+                  src={book.coverImage || "/placeholder-cover.png"}
                   alt={book.title}
                   fill
                   className="object-cover"
@@ -139,7 +150,7 @@ export default function HeroSection() {
                 />
                 {/* Spine */}
                 <div
-                  className="absolute left-0 top-0 bottom-0 w-[3px]"
+                  className="absolute left-0 top-0 bottom-0 w-0.75"
                   style={{
                     background:
                       "linear-gradient(to right, rgba(0,0,0,0.5), rgba(0,0,0,0.1))",
@@ -149,7 +160,7 @@ export default function HeroSection() {
 
               {/* Reading progress bar */}
               {book.progress !== undefined && (
-                <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-black/30">
+                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-black/30">
                   <motion.div
                     className="h-full"
                     style={{
@@ -171,7 +182,7 @@ export default function HeroSection() {
 
         {/* Shelf under hero books */}
         <motion.div
-          className="mt-0 w-[380px] md:w-[520px] mx-auto"
+          className="mt-0 w-95 md:w-130 mx-auto"
           initial={{ opacity: 0, scaleX: 0 }}
           animate={{ opacity: 1, scaleX: 1 }}
           transition={{
@@ -181,7 +192,7 @@ export default function HeroSection() {
           }}
         >
           <div
-            className="h-[8px] rounded-b-sm"
+            className="h-2 rounded-b-sm"
             style={{
               background:
                 "linear-gradient(to bottom, oklch(0.32 0.05 50), oklch(0.25 0.04 45))",
@@ -190,7 +201,7 @@ export default function HeroSection() {
             }}
           />
           <div
-            className="h-[4px] rounded-b-sm"
+            className="h-1 rounded-b-sm"
             style={{
               background:
                 "linear-gradient(to bottom, oklch(0.28 0.04 48), oklch(0.22 0.03 42))",

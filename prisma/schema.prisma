@@ -12,56 +12,49 @@ datasource db {
   provider = "postgresql"
 }
 
-
-
 model Book {
-  id                String      @id @default(cuid())
+  id Int @id @default(autoincrement())
 
   // External API reference
-  hardcoverId       Int?        @unique
+  hardcoverId Int?     @unique
+  genres      String[] @default([])
 
   // Core metadata
-  title             String
-  subtitle          String?
-  slug              String?     @unique
-  description       String?
-  headline          String?
+  title       String
+  subtitle    String?
+  slug        String? @unique
+  description String?
+  headline    String?
 
   // Publishing
-  releaseDate       DateTime?
-  releaseYear       Int?
-  pages             Int?
+  releaseDate DateTime?
+  // releaseYear Int?
+  pages       Int?
+  mood        String[]  @default([])
 
   // Media
-  coverImage        String?
-  headerImage       String?
+  coverImage  String?
+  // headerImage String?
 
   // Ratings
-  averageRating     Float?
-  ratingsCount      Int         @default(0)
-  reviewsCount      Int         @default(0)
-
-  // Engagement
-  usersCount        Int         @default(0)
-  usersReadCount    Int         @default(0)
+  averageRating Float?
+  ratingsCount  Int    @default(0)
+  reviewsCount  Int    @default(0)
 
   // Categorization
-  bookCategoryId    Int?
-  literaryTypeId    Int?
-  compilation       Boolean     @default(false)
 
   // Extra metadata
-  tags              String[]
-  links             Json?
+  tags String[]
+  // links Json?
 
   // Relations
-  authors           BookAuthor[]
-  series            BookSeries[]
-  reviews           Review[]
-  shelves           UserBook[]
+  authors Author[]
+  series  Series[]
+  reviews Review[]
+  shelves UserBook[]
 
-  createdAt         DateTime    @default(now())
-  updatedAt         DateTime    @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([title])
   @@index([slug])
@@ -69,101 +62,88 @@ model Book {
 }
 
 model Author {
-  id          String       @id @default(cuid())
+  id Int @id @default(autoincrement())
 
-  hardcoverId Int?         @unique
+  hardcoverId Int? @unique
 
-  name        String
-  bio         String?
-  image       String?
+  name  String
+  bio   String?
+  image String?
 
-  books       BookAuthor[]
+  books Book[]
 
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
-}
-
-model BookAuthor {
-  id          String    @id @default(cuid())
-
-  bookId      String
-  authorId    String
-  role        String?   // Author, Editor, Narrator
-
-  book        Book      @relation(fields: [bookId], references: [id], onDelete: Cascade)
-  author      Author    @relation(fields: [authorId], references: [id], onDelete: Cascade)
-
-  @@unique([bookId, authorId])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Series {
-  id            String       @id @default(cuid())
+  id Int @id @default(autoincrement())
 
-  hardcoverId   Int?         @unique
+  hardcoverId Int? @unique
 
-  name          String
-  description   String?
+  name        String
+  description String?
 
-  books         BookSeries[]
+  books Book[]
 
-  createdAt     DateTime     @default(now())
-}
-
-model BookSeries {
-  id            String      @id @default(cuid())
-
-  bookId        String
-  seriesId      String
-
-  position      Float?
-
-  book          Book        @relation(fields: [bookId], references: [id], onDelete: Cascade)
-  series        Series      @relation(fields: [seriesId], references: [id], onDelete: Cascade)
-
-  @@unique([bookId, seriesId])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Review {
-  id            String      @id @default(cuid())
+  id Int @id @default(autoincrement())
 
-  userId        String
-  bookId        String
+  userId Int
+  bookId Int
 
-  rating        Float
-  review        String?
+  rating Float
+  review String?
 
-  spoiler       Boolean     @default(false)
+  spoiler Boolean @default(false)
 
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  book          Book        @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  book Book @relation(fields: [bookId], references: [id], onDelete: Cascade)
 
   @@index([bookId])
   @@index([userId])
 }
 
 model UserBook {
-  id            String      @id @default(cuid())
+  id Int @id @default(autoincrement())
 
-  userId        String
-  bookId        String
+  userId Int
+  bookId Int
 
-  status        ReadingStatus
-  progress      Int?        // current page
+  status   ReadingStatus
+  progress Int? // current page
 
-  startedAt     DateTime?
-  finishedAt    DateTime?
+  startedAt  DateTime?
+  finishedAt DateTime?
 
-  rating        Float?
+  rating Float?
 
-  book          Book        @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  book Book @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id])
 
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([userId, bookId])
   @@index([status])
+}
+
+model User {
+  id Int @id @default(autoincrement())
+
+  name  String
+  email String @unique
+
+  shelves UserBook[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 enum ReadingStatus {
@@ -172,4 +152,5 @@ enum ReadingStatus {
   COMPLETED
   ON_HOLD
   DROPPED
+  WISHLIST
 }

@@ -5,16 +5,17 @@ import Image from "next/image";
 import Link from "next/link";
 import { motion, useMotionValue, useSpring, useTransform } from "motion/react";
 import { Search, X, ChevronRight } from "lucide-react";
-import {
-  books as allBooks,
-  getBooksByStatus,
-  getReadingStats,
-  type Book,
-} from "@/lib/books-data";
+// import { books as allBooks } from "@/lib/books-data";
 import { useTheme } from "@/lib/theme-provider";
-import { PhysicalShelf, ReadingProgressCard, ShelfBook, ShelfRow } from "@/components/book-shelf-row";
-
-
+import {
+  PhysicalShelf,
+  ReadingProgressCard,
+  ShelfBook,
+  ShelfRow,
+} from "@/components/book-shelf-row";
+import { getBooksByStatus, getReadingStats } from "@/utils/bookUtils";
+import { ReadingStatus } from "@/lib/generated/prisma/enums";
+import { useBookStore } from "@/store/book.store";
 
 /* ════════════════════════════════
    MAIN DASHBOARD PAGE
@@ -23,14 +24,32 @@ import { PhysicalShelf, ReadingProgressCard, ShelfBook, ShelfRow } from "@/compo
 export default function DashboardPage() {
   const { setTheme } = useTheme();
 
-  // useEffect(() => {
-  //   setTheme("light");
-  // }, [setTheme]);
+  const { books: allBooks } = useBookStore();
 
-  const stats = useMemo(() => getReadingStats(), []);
-  const currentlyReading = useMemo(() => getBooksByStatus("reading"), []);
-  const completed = useMemo(() => getBooksByStatus("completed"), []);
-  const wishlist = useMemo(() => getBooksByStatus("wishlist"), []);
+  // useEffect(() => {
+  //   fetchBooks();
+  // }, []);
+
+  const stats = useMemo(
+    () =>
+      getReadingStats({
+        books: allBooks,
+      }),
+    [],
+  );
+  const currentlyReading = useMemo(
+    () => getBooksByStatus({ books: allBooks, status: ReadingStatus.READING }),
+    [],
+  );
+  const completed = useMemo(
+    () =>
+      getBooksByStatus({ books: allBooks, status: ReadingStatus.COMPLETED }),
+    [],
+  );
+  const wishlist = useMemo(
+    () => getBooksByStatus({ books: allBooks, status: ReadingStatus.WISHLIST }),
+    [],
+  );
 
   // Search
   const [query, setQuery] = useState("");
@@ -40,8 +59,9 @@ export default function DashboardPage() {
     return allBooks.filter(
       (b) =>
         b.title.toLowerCase().includes(q) ||
-        b.author.toLowerCase().includes(q) ||
-        b.genres.some((g) => g.toLowerCase().includes(q))
+        (b.authors &&
+          b.authors.some((a) => a.name.toLowerCase().includes(q))) ||
+        b.genres.some((g) => g.toLowerCase().includes(q)),
     );
   }, [query]);
 
@@ -60,12 +80,13 @@ export default function DashboardPage() {
           My Bookshelf
         </h1>
         <p className="text-muted-foreground mt-1 text-sm">
-          {stats.totalBooks} books · {stats.totalPagesRead.toLocaleString()} pages read
+          {stats.totalBooks} books · {stats.totalPagesRead.toLocaleString()}{" "}
+          pages read
         </p>
       </motion.div>
 
       {/* Search bar — minimal, sits above shelves */}
-      <motion.div
+      {/* <motion.div
         className="mb-8 md:mb-10"
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
@@ -89,10 +110,10 @@ export default function DashboardPage() {
             </button>
           )}
         </div>
-      </motion.div>
+      </motion.div> */}
 
       {/* Search results overlay */}
-      {showSearch && (
+      {/* {showSearch && (
         <motion.section
           className="mb-12"
           initial={{ opacity: 0, y: 8 }}
@@ -125,7 +146,7 @@ export default function DashboardPage() {
             </p>
           )}
         </motion.section>
-      )}
+      )} */}
 
       {/* Shelves — only when not searching */}
       {!showSearch && (

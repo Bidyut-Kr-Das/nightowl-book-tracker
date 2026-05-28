@@ -3,12 +3,14 @@
 import { useState, useRef, useCallback } from "react";
 import Image from "next/image";
 import { motion, useSpring, useTransform, useMotionValue } from "motion/react";
-import type { Book } from "@/lib/books-data";
+import { IBook } from "@/types/interface";
+import { ReadingStatus } from "@/lib/generated/prisma/enums";
+// import type { Book } from "@/lib/books-data";
 
 interface BookCardProps {
-  book: Book;
+  book: IBook;
   index: number;
-  onSelect?: (book: Book) => void;
+  onSelect?: (book: IBook) => void;
   size?: "sm" | "md" | "lg";
 }
 
@@ -94,7 +96,7 @@ export default function BookCard({
       >
         {/* Book spine edge */}
         <div
-          className="absolute left-0 top-0 bottom-0 w-[3px] z-10"
+          className="absolute left-0 top-0 bottom-0 w-0.75 z-10"
           style={{
             background:
               "linear-gradient(to right, rgba(0,0,0,0.4), rgba(0,0,0,0.1))",
@@ -116,8 +118,8 @@ export default function BookCard({
             />
           )}
           <Image
-            src={book.coverImage}
-            alt={`${book.title} by ${book.author}`}
+            src={book.coverImage || "/placeholder-cover.png"}
+            alt={`${book.title} by ${book.authors.join(", ")}`}
             fill
             className={`object-cover transition-opacity duration-500 ${imageLoaded ? "opacity-100" : "opacity-0"}`}
             sizes={
@@ -143,7 +145,7 @@ export default function BookCard({
 
         {/* Page edge effect on right side */}
         <div
-          className="absolute right-0 top-[2px] bottom-[2px] w-[4px]"
+          className="absolute right-0 top-0.5 bottom-0.5 w-1"
           style={{
             background:
               "repeating-linear-gradient(to bottom, rgba(255,255,255,0.06) 0px, rgba(255,255,255,0.02) 1px, rgba(0,0,0,0.05) 2px)",
@@ -163,8 +165,8 @@ export default function BookCard({
         />
 
         {/* Reading progress bar */}
-        {book.status === "reading" && book.progress !== undefined && (
-          <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-black/40">
+        {book.status === ReadingStatus.READING && book.progress !== undefined && (
+          <div className="absolute bottom-0 left-0 right-0 h-0.75 bg-black/40">
             <motion.div
               className="h-full rounded-r-full"
               style={{
@@ -191,20 +193,20 @@ export default function BookCard({
         transition={{ delay: index * 0.06 + 0.3 }}
       >
         <p
-          className="text-[13px] font-medium text-foreground/90 leading-tight line-clamp-2 font-[family-name:var(--font-display)]"
+          className="text-[13px] font-medium text-foreground/90 leading-tight line-clamp-2 font-(family-name:--font-display)"
           title={book.title}
         >
           {book.title}
         </p>
         <p className="text-[11px] text-muted-foreground mt-0.5 truncate">
-          {book.author}
+          {book.authors.join(", ")}
         </p>
-        {book.rating && (
-          <div className="flex gap-[2px] mt-1">
+        {book.averageRating && (
+          <div className="flex gap-0.5 mt-1">
             {Array.from({ length: 5 }).map((_, i) => (
               <span
                 key={i}
-                className={`text-[10px] ${i < book.rating! ? "text-lamp" : "text-muted-foreground/30"}`}
+                className={`text-[10px] ${i < book.averageRating! ? "text-lamp" : "text-muted-foreground/30"}`}
               >
                 ★
               </span>

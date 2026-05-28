@@ -2,15 +2,20 @@
 
 import { motion } from "motion/react";
 import Image from "next/image";
-import { getRecentlyAdded, type Book } from "@/lib/books-data";
+// import { getRecentlyAdded, type Book } from "@/lib/books-data";
 import { Clock, Plus } from "lucide-react";
+import { IBook } from "@/types/interface";
+import { getRecentlyAdded } from "@/utils/bookUtils";
+import { useBookStore } from "@/store/book.store";
+import { ReadingStatus } from "@/lib/generated/prisma/enums";
 
 interface RecentlyAddedProps {
-  onSelectBook?: (book: Book) => void;
+  onSelectBook?: (book: IBook) => void;
 }
 
 export default function RecentlyAdded({ onSelectBook }: RecentlyAddedProps) {
-  const recent = getRecentlyAdded(5);
+  const { books } = useBookStore();
+  const recent = getRecentlyAdded({ books, count: 5 });
 
   return (
     <motion.section
@@ -20,7 +25,7 @@ export default function RecentlyAdded({ onSelectBook }: RecentlyAddedProps) {
       transition={{ duration: 0.6 }}
     >
       <div className="flex items-baseline gap-3 mb-5">
-        <h2 className="text-2xl md:text-3xl font-light tracking-tight font-[family-name:var(--font-display)]">
+        <h2 className="text-2xl md:text-3xl font-light tracking-tight font-(family-name:--font-display)">
           Recently Added
         </h2>
         <span className="text-sm text-muted-foreground">Latest arrivals</span>
@@ -31,7 +36,7 @@ export default function RecentlyAdded({ onSelectBook }: RecentlyAddedProps) {
         {recent.map((book, i) => (
           <motion.button
             key={book.id}
-            className="w-full flex items-center gap-4 p-3 rounded-xl transition-colors duration-200 hover:bg-white/[0.03] group text-left"
+            className="w-full flex items-center gap-4 p-3 rounded-xl transition-colors duration-200 hover:bg-white/3 group text-left"
             initial={{ opacity: 0, x: -10 }}
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true }}
@@ -44,9 +49,9 @@ export default function RecentlyAdded({ onSelectBook }: RecentlyAddedProps) {
             onClick={() => onSelectBook?.(book)}
           >
             {/* Mini cover */}
-            <div className="relative w-10 h-14 rounded-sm overflow-hidden flex-shrink-0 book-shadow">
+            <div className="relative w-10 h-14 rounded-sm overflow-hidden shrink-0 book-shadow">
               <Image
-                src={book.coverImage}
+                src={book.coverImage || "/placeholder-cover.png"}
                 alt={book.title}
                 fill
                 className="object-cover"
@@ -60,25 +65,25 @@ export default function RecentlyAdded({ onSelectBook }: RecentlyAddedProps) {
                 {book.title}
               </p>
               <p className="text-xs text-muted-foreground truncate">
-                {book.author}
+                {book.authors.join(", ")}
               </p>
             </div>
 
             {/* Date & Status */}
-            <div className="flex items-center gap-3 flex-shrink-0">
+            <div className="flex items-center gap-3 shrink-0">
               <span
                 className="hidden sm:inline-flex px-2 py-0.5 rounded text-[10px] uppercase tracking-wider font-medium"
                 style={{
                   background:
-                    book.status === "reading"
+                    book.status === ReadingStatus.READING
                       ? "oklch(0.82 0.12 70 / 10%)"
-                      : book.status === "completed"
+                      : book.status === ReadingStatus.COMPLETED
                         ? "oklch(0.65 0.15 145 / 10%)"
                         : "oklch(0.60 0.10 260 / 10%)",
                   color:
-                    book.status === "reading"
+                    book.status === ReadingStatus.READING
                       ? "oklch(0.82 0.12 70)"
-                      : book.status === "completed"
+                      : book.status === ReadingStatus.COMPLETED
                         ? "oklch(0.72 0.12 145)"
                         : "oklch(0.70 0.08 260)",
                 }}
@@ -87,7 +92,7 @@ export default function RecentlyAdded({ onSelectBook }: RecentlyAddedProps) {
               </span>
               <span className="text-[11px] text-muted-foreground/60 flex items-center gap-1">
                 <Clock size={10} />
-                {new Date(book.dateAdded).toLocaleDateString("en-US", {
+                {new Date(book.addedAt).toLocaleDateString("en-US", {
                   month: "short",
                   day: "numeric",
                 })}

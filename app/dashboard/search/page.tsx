@@ -1,33 +1,61 @@
 "use client";
 
-import { useState, useMemo, useCallback, useEffect, useRef } from "react";
-import { motion, AnimatePresence } from "motion/react";
-import { Search, X, BookOpen, User, Layers, Filter } from "lucide-react";
 import {
-  books as allBooks,
-  getAllGenres,
-  type Book,
-  type BookStatus,
-} from "@/lib/books-data";
+  useState,
+  useMemo,
+  useCallback,
+  useEffect,
+  useRef,
+  createContext,
+} from "react";
+import { motion, AnimatePresence, useSpring } from "motion/react";
+import Image from "next/image";
+import {
+  Search,
+  X,
+  BookOpen,
+  User,
+  Layers,
+  Filter,
+  Store,
+  Library,
+} from "lucide-react";
+
 import {
   searchBooks,
-  getAllAuthors,
-  getAllSeries,
   chunkArray,
   type SearchFilters,
 } from "@/lib/search-utils";
 import { ShelfBook, PhysicalShelf } from "@/components/book-shelf-row";
+import { ReadingStatus } from "@/lib/generated/prisma/enums";
+import { IBook } from "@/types/interface";
+import { useBookStore } from "@/store/book.store";
+import { useDebounce } from "@/hooks/use-debounce";
+import type { Author } from "@/lib/generated/prisma/client";
 
 /* ═══════════════════════════════════════════════
-   Constants
+   Constants & Types
    ═══════════════════════════════════════════════ */
 const BOOKS_PER_SHELF = 5;
 
-const STATUS_OPTIONS: { value: BookStatus; label: string }[] = [
-  { value: "reading", label: "Reading" },
-  { value: "completed", label: "Completed" },
-  { value: "wishlist", label: "Wishlist" },
-  { value: "unread", label: "Unread" },
+type GroupMode = "none" | "author" | "series";
+type SearchMode = "library" | "store";
+type StoreFilterType = "name" | "author" | "series";
+
+const STATUS_OPTIONS: { value: ReadingStatus; label: string }[] = [
+  { value: ReadingStatus.READING, label: "Reading" },
+  { value: ReadingStatus.COMPLETED, label: "Completed" },
+  { value: ReadingStatus.WISHLIST, label: "Wishlist" },
+];
+
+const STORE_FILTER_OPTIONS: {
+  value: StoreFilterType;
+  label: string;
+  icon: React.ComponentType<{ size: number; strokeWidth?: number }>;
+}[] = [
+  { value: "name", label: "By Title", icon: BookOpen },
+  { value: "author", label: "By Author", icon: User },
+  { value: "series", label: "By Series", icon: Layers },
 ];
 
 /* ═══════════════════════════════════════════════
@@ -61,9 +89,336 @@ function FilterChip({
 }
 
 /* ═══════════════════════════════════════════════
+   Group Toggle Button — for group-by modes
+   ═══════════════════════════════════════════════ */
+function GroupToggle({
+  icon: Icon,
+  label,
+  active,
+  onClick,
+}: {
+  icon: React.ComponentType<{ size: number; strokeWidth?: number }>;
+  label: string;
+  active: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`
+        flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-medium
+        transition-all duration-200 active:scale-[0.97]
+        ${
+          active
+            ? "bg-primary/12 text-primary border border-primary/20"
+            : "bg-muted/50 text-muted-foreground border border-border hover:text-foreground hover:bg-muted/80"
+        }
+      `}
+    >
+      <Icon size={14} strokeWidth={active ? 2.2 : 1.8} />
+      {label}
+    </button>
+  );
+}
+
+/* ═══════════════════════════════════════════════
+   Mode Toggle — Library / Store segmented control
+   ═══════════════════════════════════════════════ */
+function ModeToggle({
+  mode,
+  onChange,
+}: {
+  mode: SearchMode;
+  onChange: (mode: SearchMode) => void;
+}) {
+  return (
+    <div className="inline-flex items-center gap-1 p-1 rounded-2xl bg-muted/60 border border-border">
+      {(["library", "store"] as const).map((option) => {
+        const isActive = mode === option;
+        const Icon = option === "library" ? Library : Store;
+        const label = option === "library" ? "Library" : "Store";
+
+        return (
+          <button
+            key={option}
+            onClick={() => onChange(option)}
+            className={`
+              relative flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium
+              transition-colors duration-200 active:scale-[0.97]
+              ${isActive ? "text-primary" : "text-muted-foreground hover:text-foreground"}
+            `}
+          >
+            {isActive && (
+              <motion.div
+                layoutId="mode-pill"
+                className="absolute inset-0 rounded-xl bg-primary/10 border border-primary/18"
+                transition={{
+                  type: "spring",
+                  duration: 0.35,
+                  bounce: 0.15,
+                }}
+              />
+            )}
+            <span className="relative flex items-center gap-2">
+              <Icon size={15} strokeWidth={isActive ? 2.2 : 1.8} />
+              {label}
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════
+   Store Filter Tray — mutually exclusive toggles
+   ═══════════════════════════════════════════════ */
+function StoreFilterTray({
+  activeFilter,
+  onFilterChange,
+}: {
+  activeFilter: StoreFilterType;
+  onFilterChange: (filter: StoreFilterType) => void;
+}) {
+  return (
+    <motion.div
+      className="flex items-center gap-2 flex-wrap"
+      initial={{ opacity: 0, y: -4 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -4 }}
+      transition={{ duration: 0.2, ease: [0.23, 1, 0.32, 1] }}
+    >
+      <span className="text-[11px] text-muted-foreground uppercase tracking-wider font-medium mr-1">
+        Search by
+      </span>
+      {STORE_FILTER_OPTIONS.map((opt) => (
+        <GroupToggle
+          key={opt.value}
+          icon={opt.icon}
+          label={opt.label}
+          active={activeFilter === opt.value}
+          onClick={() => onFilterChange(opt.value)}
+        />
+      ))}
+    </motion.div>
+  );
+}
+
+/* ═══════════════════════════════════════════════
+   Loading Skeleton — subtle shimmer for shelves
+   ═══════════════════════════════════════════════ */
+function StoreLoadingState() {
+  return (
+    <motion.div
+      className="py-12"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.2 }}
+    >
+      {[0, 1].map((shelfIdx) => (
+        <div key={shelfIdx} className="mb-10 md:mb-14">
+          <div className="relative">
+            <div className="flex items-end gap-8 md:gap-10 pb-0.5 px-4">
+              {Array.from({ length: BOOKS_PER_SHELF }).map((_, i) => (
+                <div
+                  key={i}
+                  className="shrink-0 rounded-lg overflow-hidden"
+                  style={{
+                    width: 100,
+                    height: 150,
+                    background:
+                      "linear-gradient(90deg, var(--muted) 25%, var(--accent) 50%, var(--muted) 75%)",
+                    backgroundSize: "200% 100%",
+                    animation: `shimmer 1.5s infinite linear`,
+                    animationDelay: `${i * 100}ms`,
+                  }}
+                />
+              ))}
+            </div>
+            <PhysicalShelf />
+          </div>
+        </div>
+      ))}
+    </motion.div>
+  );
+}
+
+/* ═══════════════════════════════════════════════
+   Author Card — tactile, wooden-feeling card
+   Matches the cozy bookshelf aesthetic
+   ═══════════════════════════════════════════════ */
+function AuthorCard({
+  author,
+  index,
+  onClick,
+}: {
+  author: Pick<Author, "name" | "bio" | "image">;
+  index: number;
+  onClick: (authorName: string) => void;
+}) {
+  const ref = useRef<HTMLButtonElement>(null);
+  const scale = useSpring(1, { stiffness: 200, damping: 25 });
+  const y = useSpring(0, { stiffness: 200, damping: 25 });
+
+  // Generate warm initials fallback
+  const initials = author.name
+    .split(" ")
+    .map((w) => w[0])
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
+
+  return (
+    <motion.button
+      ref={ref}
+      onClick={() => onClick(author.name)}
+      initial={{ opacity: 0, y: 12, scale: 0.97 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      transition={{
+        delay: index * 0.06,
+        duration: 0.4,
+        ease: [0.23, 1, 0.32, 1],
+      }}
+      onMouseEnter={() => {
+        scale.set(1.02);
+        y.set(-3);
+      }}
+      onMouseLeave={() => {
+        scale.set(1);
+        y.set(0);
+      }}
+      style={{ scale, y }}
+      className="paper-card group text-left w-full rounded-2xl overflow-hidden
+                 transition-shadow duration-200 active:scale-[0.97]
+                 cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+    >
+      {/* Card content */}
+      <div className="p-5 flex items-start gap-4">
+        {/* Author image / initials */}
+        <div className="shrink-0">
+          {author.image ? (
+            <div
+              className="relative w-14 h-14 rounded-full overflow-hidden"
+              style={{
+                border: "2px solid oklch(from var(--shelf) l c h / 40%)",
+                boxShadow:
+                  "0 2px 8px rgba(0,0,0,0.1), 0 1px 3px rgba(0,0,0,0.06)",
+              }}
+            >
+              <Image
+                src={author.image}
+                alt={author.name}
+                fill
+                className="object-cover"
+                sizes="56px"
+              />
+            </div>
+          ) : (
+            <div
+              className="w-14 h-14 rounded-full flex items-center justify-center text-lg font-semibold"
+              style={{
+                background:
+                  "linear-gradient(135deg, oklch(from var(--shelf) l c h / 25%), oklch(from var(--cocoa) l c h / 20%))",
+                border: "2px solid oklch(from var(--shelf) l c h / 30%)",
+                color: "oklch(from var(--cocoa) l c h / 80%)",
+                boxShadow:
+                  "0 2px 8px rgba(0,0,0,0.08), inset 0 1px 2px rgba(255,255,255,0.15)",
+              }}
+            >
+              {initials}
+            </div>
+          )}
+        </div>
+
+        {/* Author info */}
+        <div className="flex-1 min-w-0 py-0.5">
+          <h3 className="text-sm font-semibold font-(family-name:--font-dynapuff) text-foreground group-hover:text-primary transition-colors duration-200 truncate">
+            {author.name}
+          </h3>
+          {author.bio && (
+            <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed line-clamp-2">
+              {author.bio}
+            </p>
+          )}
+          <span className="inline-flex items-center gap-1 mt-2.5 text-[10px] text-primary/60 font-medium uppercase tracking-wider group-hover:text-primary/80 transition-colors">
+            <Search size={10} strokeWidth={2.5} />
+            View books
+          </span>
+        </div>
+      </div>
+
+      {/* Wooden bottom accent — ties to bookshelf world */}
+      <div
+        className="h-1"
+        style={{
+          background:
+            "linear-gradient(to right, oklch(0.82 0.03 65), oklch(0.74 0.04 58), oklch(0.82 0.03 65))",
+        }}
+      />
+    </motion.button>
+  );
+}
+
+/* ═══════════════════════════════════════════════
+   Author Card Grid — grid layout for author results
+   ═══════════════════════════════════════════════ */
+function AuthorCardGrid({
+  authors,
+  onAuthorClick,
+}: {
+  authors: Pick<Author, "name" | "bio" | "image">[];
+  onAuthorClick: (authorName: string) => void;
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.3 }}
+    >
+      {/* Section header */}
+      <motion.div
+        className="flex items-baseline justify-between mb-6"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.05, duration: 0.3 }}
+      >
+        <h2 className="text-xl md:text-2xl font-semibold tracking-tight font-(family-name:--font-dynapuff)">
+          Authors found
+        </h2>
+        <span className="text-xs text-muted-foreground">
+          {authors.length} {authors.length === 1 ? "author" : "authors"}
+        </span>
+      </motion.div>
+
+      {/* Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {authors.map((author, i) => (
+          <AuthorCard
+            key={author.name}
+            author={author}
+            index={i}
+            onClick={onAuthorClick}
+          />
+        ))}
+      </div>
+    </motion.div>
+  );
+}
+
+/* ═══════════════════════════════════════════════
    Empty State — when no results found
    ═══════════════════════════════════════════════ */
-function EmptyState({ query, hasFilters }: { query: string; hasFilters: boolean }) {
+function EmptyState({
+  query,
+  hasFilters,
+  isStoreMode,
+}: {
+  query: string;
+  hasFilters: boolean;
+  isStoreMode: boolean;
+}) {
   return (
     <motion.div
       className="flex flex-col items-center justify-center py-20 md:py-28"
@@ -78,31 +433,91 @@ function EmptyState({ query, hasFilters }: { query: string; hasFilters: boolean 
           border: "1px solid oklch(from var(--primary) l c h / 12%)",
         }}
       >
-        <BookOpen size={24} className="text-primary/60" />
+        {isStoreMode ? (
+          <Store size={24} className="text-primary/60" />
+        ) : (
+          <BookOpen size={24} className="text-primary/60" />
+        )}
       </div>
-      <h3 className="text-lg font-semibold font-[family-name:var(--font-dynapuff)] text-foreground/80 mb-2">
-        {query ? "No books found" : "No matches"}
+      <h3 className="text-lg font-semibold font-(family-name:--font-dynapuff) text-foreground/80 mb-2">
+        {query
+          ? "No books found"
+          : isStoreMode
+            ? "Search the store"
+            : "No matches"}
       </h3>
       <p className="text-sm text-muted-foreground text-center max-w-xs leading-relaxed">
-        {query
-          ? `We couldn't find any books matching "${query}". Try a different search or adjust your filters.`
-          : hasFilters
-            ? "No books match the current filters. Try removing some filters to see more results."
-            : "Start typing to search across your entire library — titles, authors, genres, and series."}
+        {isStoreMode
+          ? query
+            ? `No store results for "${query}". Try a different search term or switch the search filter.`
+            : "Search the store by title, author, or series to discover new books."
+          : query
+            ? `We couldn't find any books matching "${query}". Try a different search or adjust your filters.`
+            : hasFilters
+              ? "No books match the current filters. Try removing some filters to see more results."
+              : "Start typing to search across your entire library — titles, authors, genres, and series."}
       </p>
     </motion.div>
   );
 }
 
 /* ═══════════════════════════════════════════════
-   Search Results Shelf — books arranged in shelf rows
-   Max 5 per row, with automatic new rows
+   Single Shelf — one physical bookshelf row
+   When grouped, no book limit per shelf.
+   When ungrouped, chunked to BOOKS_PER_SHELF.
    ═══════════════════════════════════════════════ */
-function SearchResultsShelves({
+function BookshelfRow({
+  books,
+  baseIndex = 0,
+  delay = 0,
+}: {
+  books: IBook[];
+  baseIndex?: number;
+  delay?: number;
+}) {
+  return (
+    <motion.div
+      className="mb-10 md:mb-14"
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{
+        delay,
+        duration: 0.45,
+        ease: [0.23, 1, 0.32, 1],
+      }}
+    >
+      <div className="relative">
+        <div
+          className="overflow-x-auto scrollbar-none overflow-y-hidden"
+          style={{
+            scrollbarWidth: "none",
+            paddingTop: "12px",
+            marginTop: "-12px",
+          }}
+        >
+          <div
+            className="flex items-end gap-8 md:gap-10 pb-0.5 px-4"
+            style={{ paddingTop: "12px" }}
+          >
+            {books.map((book, i) => (
+              <ShelfBook key={i} book={book} index={baseIndex + i} size="md" />
+            ))}
+          </div>
+        </div>
+        <PhysicalShelf />
+      </div>
+    </motion.div>
+  );
+}
+
+/* ═══════════════════════════════════════════════
+   Flat Shelves — chunked rows of BOOKS_PER_SHELF
+   ═══════════════════════════════════════════════ */
+function FlatShelves({
   books,
   shelfLabel,
 }: {
-  books: Book[];
+  books: IBook[];
   shelfLabel?: string;
 }) {
   const shelves = useMemo(() => chunkArray(books, BOOKS_PER_SHELF), [books]);
@@ -116,7 +531,7 @@ function SearchResultsShelves({
           animate={{ opacity: 1 }}
           transition={{ duration: 0.3 }}
         >
-          <h2 className="text-xl md:text-2xl font-semibold tracking-tight font-[family-name:var(--font-dynapuff)]">
+          <h2 className="text-xl md:text-2xl font-semibold tracking-tight font-(family-name:--font-dynapuff)">
             {shelfLabel}
           </h2>
           <span className="text-xs text-muted-foreground">
@@ -126,48 +541,221 @@ function SearchResultsShelves({
       )}
 
       {shelves.map((shelfBooks, shelfIndex) => (
-        <motion.div
+        <BookshelfRow
           key={`shelf-${shelfIndex}`}
-          className="mb-10 md:mb-14"
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{
-            delay: shelfIndex * 0.08,
-            duration: 0.45,
-            ease: [0.23, 1, 0.32, 1],
-          }}
-        >
-          <div className="relative">
-            {/* Scroll wrapper with breathing room for hover lift */}
-            <div
-              className="overflow-x-auto scrollbar-none overflow-y-hidden"
-              style={{
-                scrollbarWidth: "none",
-                paddingTop: "12px",
-                marginTop: "-12px",
-              }}
-            >
-              <div
-                className="flex items-end gap-8 md:gap-10 pb-0.5 px-4"
-                style={{ paddingTop: "12px" }}
-              >
-                {shelfBooks.map((book, bookIndex) => (
-                  <ShelfBook
-                    key={book.id}
-                    book={book}
-                    index={shelfIndex * BOOKS_PER_SHELF + bookIndex}
-                    size="md"
-                  />
-                ))}
-              </div>
-            </div>
-            <PhysicalShelf />
-          </div>
-        </motion.div>
+          books={shelfBooks}
+          baseIndex={shelfIndex * BOOKS_PER_SHELF}
+          delay={shelfIndex * 0.08}
+        />
       ))}
     </div>
   );
 }
+
+/* ═══════════════════════════════════════════════
+   Grouped Shelves — one shelf per group (author or series)
+   Each shelf is labeled and has no book limit.
+   ═══════════════════════════════════════════════ */
+function GroupedShelves({
+  books,
+  groupBy,
+}: {
+  books: IBook[];
+  groupBy: "author" | "series";
+}) {
+  const groups = useMemo(() => {
+    const map = new Map<string, IBook[]>();
+
+    books.forEach((book) => {
+      if (groupBy === "author") {
+        book.authors.forEach((author) => {
+          const key = typeof author === "string" ? author : author.name;
+          if (!map.has(key)) map.set(key, []);
+          map.get(key)!.push(book);
+        });
+      } else {
+        // Group by series — books without a series go into "Standalone"
+        let key = "Standalone";
+        if (book.series && Array.isArray(book.series)) {
+          book.series.forEach((s) => {
+            key = typeof s === "string" ? s : s.name;
+          });
+        }
+
+        if (!map.has(key)) map.set(key, []);
+        map.get(key)!.push(book);
+      }
+    });
+
+    // Sort groups alphabetically, but put "Standalone" last
+    return Array.from(map.entries()).sort(([a], [b]) => {
+      if (a === "Standalone") return 1;
+      if (b === "Standalone") return -1;
+      return a.localeCompare(b);
+    });
+  }, [books, groupBy]);
+
+  let runningIndex = 0;
+
+  return (
+    <div>
+      {groups.map(([groupName, groupBooks], groupIndex) => {
+        const baseIndex = runningIndex;
+        runningIndex += groupBooks.length;
+
+        return (
+          <motion.section
+            key={groupName}
+            className="mb-12 md:mb-16"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: groupIndex * 0.06, duration: 0.5 }}
+          >
+            {/* Group header */}
+            <div className="flex items-baseline justify-between mb-5">
+              <h2 className="text-xl md:text-2xl font-semibold tracking-tight font-(family-name:--font-dynapuff)">
+                {groupName}
+              </h2>
+              <span className="text-xs text-muted-foreground">
+                {groupBooks.length} {groupBooks.length === 1 ? "book" : "books"}
+              </span>
+            </div>
+
+            {/* Full shelf — all books in one row, scrollable */}
+            <BookshelfRow
+              books={groupBooks}
+              baseIndex={baseIndex}
+              delay={groupIndex * 0.06}
+            />
+          </motion.section>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════
+   Store Results — decides rendering based on
+   filter type + Zustand flag
+   ═══════════════════════════════════════════════ */
+function StoreResults({
+  storeFilter,
+  relevantBooks,
+  relevantAuthors,
+  flag,
+  debouncedQuery,
+  onAuthorClick,
+}: {
+  storeFilter: StoreFilterType;
+  relevantBooks: IBook[];
+  relevantAuthors: Pick<Author, "name" | "bio" | "image">[];
+  flag: "BOOK_RESULT" | "AUTHOR_RESULT" | "SERIES_RESULT" | null;
+  debouncedQuery: string;
+  onAuthorClick: (authorName: string) => void;
+}) {
+  // ── Title search → flat bookshelves ──
+  if (storeFilter === "name") {
+    if (relevantBooks.length === 0) {
+      return (
+        <EmptyState query={debouncedQuery} hasFilters={false} isStoreMode />
+      );
+    }
+    return (
+      <motion.div
+        key={`store-title-${debouncedQuery}`}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.3 }}
+      >
+        <motion.div
+          className="flex items-baseline justify-between mb-6"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.05, duration: 0.3 }}
+        >
+          <h2 className="text-xl md:text-2xl font-semibold tracking-tight font-(family-name:--font-dynapuff)">
+            Store results
+          </h2>
+          <span className="text-xs text-muted-foreground">
+            {relevantBooks.length}{" "}
+            {relevantBooks.length === 1 ? "book" : "books"}
+          </span>
+        </motion.div>
+        <FlatShelves books={relevantBooks} />
+      </motion.div>
+    );
+  }
+
+  // ── Series search → grouped by series ──
+  if (storeFilter === "series") {
+    if (relevantBooks.length === 0) {
+      return (
+        <EmptyState query={debouncedQuery} hasFilters={false} isStoreMode />
+      );
+    }
+    return (
+      <motion.div
+        key={`store-series-${debouncedQuery}`}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.3 }}
+      >
+        <GroupedShelves books={relevantBooks} groupBy="series" />
+      </motion.div>
+    );
+  }
+
+  // ── Author search → dual rendering mode ──
+  // Priority: relevant_books > relevant_authors
+  if (storeFilter === "author") {
+    if (relevantBooks.length > 0) {
+      // BOOK_RESULT (or both exist — prioritize books)
+      return (
+        <motion.div
+          key={`store-author-books-${debouncedQuery}`}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.3 }}
+        >
+          <motion.div
+            className="flex items-baseline justify-between mb-6"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.05, duration: 0.3 }}
+          >
+            <h2 className="text-xl md:text-2xl font-semibold tracking-tight font-(family-name:--font-dynapuff)">
+              Books by author
+            </h2>
+            <span className="text-xs text-muted-foreground">
+              {relevantBooks.length}{" "}
+              {relevantBooks.length === 1 ? "book" : "books"}
+            </span>
+          </motion.div>
+          <FlatShelves books={relevantBooks} />
+        </motion.div>
+      );
+    }
+
+    if (flag === "AUTHOR_RESULT" && relevantAuthors.length > 0) {
+      // AUTHOR_RESULT — render author cards
+      return (
+        <AuthorCardGrid
+          authors={relevantAuthors}
+          onAuthorClick={onAuthorClick}
+        />
+      );
+    }
+
+    // No results at all
+    return <EmptyState query={debouncedQuery} hasFilters={false} isStoreMode />;
+  }
+
+  return null;
+}
+export const SearchModeContext = createContext<SearchMode>("library");
 
 /* ═══════════════════════════════════════════════
    SEARCH PAGE — main component
@@ -175,46 +763,118 @@ function SearchResultsShelves({
 export default function SearchPage() {
   const inputRef = useRef<HTMLInputElement>(null);
   const [query, setQuery] = useState("");
-  const [debouncedQuery, setDebouncedQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<BookStatus | null>(null);
-  const [authorFilter, setAuthorFilter] = useState<string | null>(null);
-  const [seriesFilter, setSeriesFilter] = useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = useState<ReadingStatus | null>(null);
+  const [groupMode, setGroupMode] = useState<GroupMode>("none");
   const [filtersExpanded, setFiltersExpanded] = useState(false);
 
-  // Derived data
-  const authors = useMemo(() => getAllAuthors(), []);
-  const seriesList = useMemo(() => getAllSeries(), []);
+  // ── Dual-mode state ──
+  const [searchMode, setSearchMode] = useState<SearchMode>("library");
+  const [storeFilter, setStoreFilter] = useState<StoreFilterType>("name");
 
-  // Debounce search query — near real-time (180ms)
-  useEffect(() => {
-    const timer = setTimeout(() => setDebouncedQuery(query), 180);
-    return () => clearTimeout(timer);
-  }, [query]);
+  // ── Debounced query via hook ──
+  const debouncedQuery = useDebounce(query, 550);
+  // ── Zustand store ──
+  const {
+    books: allBooks,
+    relevant_books,
+    relevant_authors,
+    flag,
+    loading,
+    browseStoreBooks,
+    browseStoreAuthors,
+    browseStoreSeries,
+  } = useBookStore();
 
-  // Search results
+  // ── Library mode search ──
   const filters: SearchFilters = useMemo(
     () => ({
       query: debouncedQuery,
       status: statusFilter,
-      author: authorFilter,
-      series: seriesFilter,
+      author: null,
+      series: null,
     }),
-    [debouncedQuery, statusFilter, authorFilter, seriesFilter]
+    [debouncedQuery, statusFilter],
   );
 
-  const results = useMemo(() => searchBooks(filters), [filters]);
+  const libraryResults = useMemo(
+    () => searchBooks(allBooks, filters),
+    [allBooks, filters],
+  );
 
-  const hasActiveFilters = statusFilter || authorFilter || seriesFilter;
+  // ── Store mode search — calls Zustand actions ──
+  useEffect(() => {
+    if (searchMode !== "store") return;
+    if (!debouncedQuery.trim()) return;
+
+    if (storeFilter === "name") {
+      browseStoreBooks({ query: debouncedQuery });
+    } else if (storeFilter === "author") {
+      browseStoreAuthors({ query: debouncedQuery });
+    } else if (storeFilter === "series") {
+      browseStoreSeries({ query: debouncedQuery });
+    }
+  }, [
+    debouncedQuery,
+    storeFilter,
+    searchMode,
+    browseStoreBooks,
+    browseStoreAuthors,
+    browseStoreSeries,
+  ]);
+
+  // ── Derived state ──
+  const isLibraryMode = searchMode === "library";
+  const hasActiveFilters = statusFilter || groupMode !== "none";
   const hasQuery = debouncedQuery.trim().length > 0;
-  const showResults = hasQuery || hasActiveFilters;
-  const activeFilterCount = [statusFilter, authorFilter, seriesFilter].filter(Boolean).length;
+  const showLibraryResults = hasQuery || statusFilter;
+
+  const libraryDisplayBooks = showLibraryResults ? libraryResults : allBooks;
+
+  // Store has any results?
+  const storeHasResults =
+    relevant_books.length > 0 || relevant_authors.length > 0;
 
   const clearAll = useCallback(() => {
     setQuery("");
-    setDebouncedQuery("");
-    setStatusFilter(null);
-    setAuthorFilter(null);
-    setSeriesFilter(null);
+    if (isLibraryMode) {
+      setStatusFilter(null);
+      setGroupMode("none");
+    }
+  }, [isLibraryMode]);
+
+  // Handle mode switch
+  const handleModeChange = useCallback(
+    (newMode: SearchMode) => {
+      if (newMode === searchMode) return;
+      setSearchMode(newMode);
+      setQuery("");
+      if (newMode === "library") {
+        setStatusFilter(null);
+        setGroupMode("none");
+        setFiltersExpanded(false);
+      }
+      if (newMode === "store") {
+        setStoreFilter("name");
+      }
+    },
+    [searchMode],
+  );
+
+  // Handle store filter change — clear stale results
+  const handleStoreFilterChange = useCallback(
+    (newFilter: StoreFilterType) => {
+      if (newFilter === storeFilter) return;
+      setStoreFilter(newFilter);
+      // Clear query so stale results don't flash
+      setQuery("");
+    },
+    [storeFilter],
+  );
+
+  // Handle author card click — search by that author's name
+  const handleAuthorClick = useCallback((authorName: string) => {
+    setQuery(authorName);
+    // The debounced effect will pick up the new query and call browseStoreAuthors
   }, []);
 
   // Auto-focus search input on mount
@@ -223,308 +883,359 @@ export default function SearchPage() {
     return () => clearTimeout(timer);
   }, []);
 
-  return (
-    <div className="max-w-5xl mx-auto">
-      {/* Page header */}
-      <motion.div
-        className="mb-6 md:mb-8"
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, ease: [0.23, 1, 0.32, 1] }}
-      >
-        <h1 className="text-3xl md:text-4xl font-semibold tracking-tight font-[family-name:var(--font-dynapuff)]">
-          Search Library
-        </h1>
-        <p className="text-muted-foreground mt-1 text-sm">
-          Find books by title, author, genre, or series
-        </p>
-      </motion.div>
+  // Re-focus when switching modes
+  useEffect(() => {
+    const timer = setTimeout(() => inputRef.current?.focus(), 150);
+    return () => clearTimeout(timer);
+  }, [searchMode]);
 
-      {/* ──────────────────────────────
+  const searchPlaceholder = isLibraryMode
+    ? "Search titles, authors, genres, series…"
+    : storeFilter === "name"
+      ? "Search by book title…"
+      : storeFilter === "author"
+        ? "Search by author name…"
+        : "Search by series name…";
+
+  return (
+    <SearchModeContext.Provider value={searchMode}>
+      <div className="max-w-5xl mx-auto">
+        {/* Page header + Mode toggle */}
+        <motion.div
+          className="mb-6 md:mb-8"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, ease: [0.23, 1, 0.32, 1] }}
+        >
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-1">
+            {/* Animated heading */}
+            <div>
+              <AnimatePresence mode="wait">
+                <motion.h1
+                  key={searchMode}
+                  className="text-3xl md:text-4xl font-semibold tracking-tight font-(family-name:--font-dynapuff)"
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -6 }}
+                  transition={{ duration: 0.25, ease: [0.23, 1, 0.32, 1] }}
+                >
+                  {isLibraryMode ? "Search Library" : "Browse Book Store"}
+                </motion.h1>
+              </AnimatePresence>
+              <AnimatePresence mode="wait">
+                <motion.p
+                  key={searchMode}
+                  className="text-muted-foreground mt-1 text-sm"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  {isLibraryMode
+                    ? "Find books by title, author, genre, or series"
+                    : "Discover new books to add to your collection"}
+                </motion.p>
+              </AnimatePresence>
+            </div>
+
+            {/* Mode toggle */}
+            <ModeToggle mode={searchMode} onChange={handleModeChange} />
+          </div>
+        </motion.div>
+
+        {/* ──────────────────────────────
           Search Bar — large, elegant
          ────────────────────────────── */}
-      <motion.div
-        className="mb-6"
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.08, duration: 0.4, ease: [0.23, 1, 0.32, 1] }}
-      >
-        <div
-          className="flex items-center gap-3 h-14 md:h-[60px] px-5 rounded-2xl transition-all duration-200 paper-card"
-          style={{
-            boxShadow: query
-              ? "0 2px 16px rgba(0,0,0,0.06), 0 0 0 2px oklch(from var(--primary) l c h / 12%)"
-              : undefined,
-          }}
+        <motion.div
+          className="mb-6"
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.08, duration: 0.4, ease: [0.23, 1, 0.32, 1] }}
         >
-          <Search
-            size={20}
-            className="text-muted-foreground shrink-0"
-            strokeWidth={2}
-          />
-          <input
-            ref={inputRef}
-            type="text"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search titles, authors, genres, series…"
-            className="flex-1 bg-transparent text-base md:text-lg outline-none placeholder:text-muted-foreground/40 font-[family-name:var(--font-body)]"
-          />
-          <AnimatePresence>
-            {query && (
-              <motion.button
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.8 }}
-                transition={{ duration: 0.15 }}
-                onClick={() => {
-                  setQuery("");
-                  inputRef.current?.focus();
-                }}
-                className="w-7 h-7 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors active:scale-95"
+          <div
+            className="flex items-center gap-3 h-14 md:h-15 px-5 rounded-2xl transition-all duration-200 paper-card"
+            style={{
+              boxShadow: query
+                ? "0 2px 16px rgba(0,0,0,0.06), 0 0 0 2px oklch(from var(--primary) l c h / 12%)"
+                : undefined,
+            }}
+          >
+            <Search
+              size={20}
+              className="text-muted-foreground shrink-0"
+              strokeWidth={2}
+            />
+            <input
+              ref={inputRef}
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder={searchPlaceholder}
+              className="flex-1 bg-transparent text-base md:text-lg outline-none placeholder:text-muted-foreground/40 font-(family-name:--font-body)"
+            />
+            <AnimatePresence>
+              {query && (
+                <motion.button
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.8 }}
+                  transition={{ duration: 0.15 }}
+                  onClick={() => {
+                    setQuery("");
+                    inputRef.current?.focus();
+                  }}
+                  className="w-7 h-7 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors active:scale-95"
+                >
+                  <X size={15} />
+                </motion.button>
+              )}
+            </AnimatePresence>
+          </div>
+        </motion.div>
+
+        {/* ──────────────────────────────
+          Filters & Group-by controls
+         ────────────────────────────── */}
+        <motion.div
+          className="mb-8 md:mb-10"
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.14, duration: 0.4, ease: [0.23, 1, 0.32, 1] }}
+        >
+          <AnimatePresence mode="wait">
+            {isLibraryMode ? (
+              /* ─── Library Mode Filters ─── */
+              <motion.div
+                key="library-filters"
+                initial={{ opacity: 0, y: -4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -4 }}
+                transition={{ duration: 0.2, ease: [0.23, 1, 0.32, 1] }}
               >
-                <X size={15} />
-              </motion.button>
+                {/* Top row: filter toggle + group-by buttons + clear */}
+                <div className="flex items-center gap-2 flex-wrap mb-3">
+                  {/* Filters toggle */}
+                  <button
+                    onClick={() => setFiltersExpanded(!filtersExpanded)}
+                    className={`
+                    flex items-center gap-2 px-3 py-2 rounded-xl text-sm transition-all duration-200 active:scale-[0.97]
+                    ${
+                      filtersExpanded || statusFilter
+                        ? "bg-primary/10 text-primary"
+                        : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
+                    }
+                  `}
+                  >
+                    <Filter size={15} strokeWidth={2} />
+                    <span className="font-medium">Filters</span>
+                    {statusFilter && (
+                      <span className="ml-0.5 w-5 h-5 rounded-full bg-primary text-primary-foreground text-[10px] font-semibold flex items-center justify-center">
+                        1
+                      </span>
+                    )}
+                  </button>
+
+                  {/* Separator dot */}
+                  <span className="w-1 h-1 rounded-full bg-border shrink-0 hidden sm:block" />
+
+                  {/* Group-by toggles */}
+                  <GroupToggle
+                    icon={User}
+                    label="Group by Author"
+                    active={groupMode === "author"}
+                    onClick={() =>
+                      setGroupMode(groupMode === "author" ? "none" : "author")
+                    }
+                  />
+                  <GroupToggle
+                    icon={Layers}
+                    label="Group by Series"
+                    active={groupMode === "series"}
+                    onClick={() =>
+                      setGroupMode(groupMode === "series" ? "none" : "series")
+                    }
+                  />
+
+                  {/* Spacer + Clear all */}
+                  {hasActiveFilters && (
+                    <motion.button
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      onClick={clearAll}
+                      className="ml-auto text-xs text-primary hover:text-primary/80 transition-colors font-medium"
+                    >
+                      Clear all
+                    </motion.button>
+                  )}
+                </div>
+
+                {/* Expandable status filter */}
+                <AnimatePresence>
+                  {filtersExpanded && (
+                    <motion.div
+                      className="paper-card p-5 rounded-2xl"
+                      initial={{ opacity: 0, height: 0, marginBottom: 0 }}
+                      animate={{ opacity: 1, height: "auto", marginBottom: 16 }}
+                      exit={{ opacity: 0, height: 0, marginBottom: 0 }}
+                      transition={{ duration: 0.25, ease: [0.23, 1, 0.32, 1] }}
+                    >
+                      {/* Status */}
+                      <div>
+                        <div className="flex items-center gap-2 mb-2.5">
+                          <BookOpen
+                            size={13}
+                            className="text-muted-foreground"
+                          />
+                          <p className="text-[11px] text-muted-foreground uppercase tracking-wider font-medium">
+                            Status
+                          </p>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          {STATUS_OPTIONS.map((s) => (
+                            <FilterChip
+                              key={s.value}
+                              label={s.label}
+                              active={statusFilter === s.value}
+                              onClick={() =>
+                                setStatusFilter(
+                                  statusFilter === s.value ? null : s.value,
+                                )
+                              }
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                {/* Active filter pills — visible when collapsed */}
+                {statusFilter && !filtersExpanded && (
+                  <motion.div
+                    className="flex flex-wrap gap-2 mt-1"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs bg-primary/10 text-primary border border-primary/15">
+                      {
+                        STATUS_OPTIONS.find((s) => s.value === statusFilter)
+                          ?.label
+                      }
+                      <button
+                        onClick={() => setStatusFilter(null)}
+                        className="hover:text-primary/70 transition-colors"
+                      >
+                        <X size={11} />
+                      </button>
+                    </span>
+                  </motion.div>
+                )}
+              </motion.div>
+            ) : (
+              /* ─── Store Mode Filters ─── */
+              <StoreFilterTray
+                key="store-filters"
+                activeFilter={storeFilter}
+                onFilterChange={handleStoreFilterChange}
+              />
             )}
           </AnimatePresence>
-        </div>
-      </motion.div>
+        </motion.div>
 
-      {/* ──────────────────────────────
-          Filter Toggle & Chips
-         ────────────────────────────── */}
-      <motion.div
-        className="mb-8 md:mb-10"
-        initial={{ opacity: 0, y: 6 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.14, duration: 0.4, ease: [0.23, 1, 0.32, 1] }}
-      >
-        {/* Filter bar header */}
-        <div className="flex items-center justify-between mb-3">
-          <button
-            onClick={() => setFiltersExpanded(!filtersExpanded)}
-            className={`
-              flex items-center gap-2 px-3 py-2 rounded-xl text-sm transition-all duration-200 active:scale-[0.97]
-              ${
-                filtersExpanded
-                  ? "bg-primary/10 text-primary"
-                  : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
-              }
-            `}
-          >
-            <Filter size={15} strokeWidth={2} />
-            <span className="font-medium">Filters</span>
-            {activeFilterCount > 0 && (
-              <span className="ml-0.5 w-5 h-5 rounded-full bg-primary text-primary-foreground text-[10px] font-semibold flex items-center justify-center">
-                {activeFilterCount}
-              </span>
-            )}
-          </button>
-
-          {hasActiveFilters && (
-            <motion.button
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              onClick={clearAll}
-              className="text-xs text-primary hover:text-primary/80 transition-colors font-medium"
-            >
-              Clear all
-            </motion.button>
-          )}
-        </div>
-
-        {/* Expandable filter sections */}
-        <AnimatePresence>
-          {filtersExpanded && (
-            <motion.div
-              className="space-y-5 paper-card p-5 rounded-2xl"
-              initial={{ opacity: 0, height: 0, marginBottom: 0 }}
-              animate={{ opacity: 1, height: "auto", marginBottom: 16 }}
-              exit={{ opacity: 0, height: 0, marginBottom: 0 }}
-              transition={{ duration: 0.25, ease: [0.23, 1, 0.32, 1] }}
-            >
-              {/* Status */}
-              <div>
-                <div className="flex items-center gap-2 mb-2.5">
-                  <BookOpen size={13} className="text-muted-foreground" />
-                  <p className="text-[11px] text-muted-foreground uppercase tracking-wider font-medium">
-                    Status
-                  </p>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {STATUS_OPTIONS.map((s) => (
-                    <FilterChip
-                      key={s.value}
-                      label={s.label}
-                      active={statusFilter === s.value}
-                      onClick={() =>
-                        setStatusFilter(
-                          statusFilter === s.value ? null : s.value
-                        )
-                      }
-                    />
-                  ))}
-                </div>
-              </div>
-
-              {/* Author */}
-              <div>
-                <div className="flex items-center gap-2 mb-2.5">
-                  <User size={13} className="text-muted-foreground" />
-                  <p className="text-[11px] text-muted-foreground uppercase tracking-wider font-medium">
-                    Author
-                  </p>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {authors.map((author) => (
-                    <FilterChip
-                      key={author}
-                      label={author}
-                      active={authorFilter === author}
-                      onClick={() =>
-                        setAuthorFilter(
-                          authorFilter === author ? null : author
-                        )
-                      }
-                    />
-                  ))}
-                </div>
-              </div>
-
-              {/* Series */}
-              {seriesList.length > 0 && (
-                <div>
-                  <div className="flex items-center gap-2 mb-2.5">
-                    <Layers size={13} className="text-muted-foreground" />
-                    <p className="text-[11px] text-muted-foreground uppercase tracking-wider font-medium">
-                      Series
-                    </p>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {seriesList.map((series) => (
-                      <FilterChip
-                        key={series}
-                        label={series}
-                        active={seriesFilter === series}
-                        onClick={() =>
-                          setSeriesFilter(
-                            seriesFilter === series ? null : series
-                          )
-                        }
-                      />
-                    ))}
-                  </div>
-                </div>
-              )}
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* Active filter pills — always visible when filters are set */}
-        {hasActiveFilters && !filtersExpanded && (
-          <motion.div
-            className="flex flex-wrap gap-2 mt-1"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.2 }}
-          >
-            {statusFilter && (
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs bg-primary/10 text-primary border border-primary/15">
-                {STATUS_OPTIONS.find((s) => s.value === statusFilter)?.label}
-                <button
-                  onClick={() => setStatusFilter(null)}
-                  className="hover:text-primary/70 transition-colors"
-                >
-                  <X size={11} />
-                </button>
-              </span>
-            )}
-            {authorFilter && (
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs bg-primary/10 text-primary border border-primary/15">
-                {authorFilter}
-                <button
-                  onClick={() => setAuthorFilter(null)}
-                  className="hover:text-primary/70 transition-colors"
-                >
-                  <X size={11} />
-                </button>
-              </span>
-            )}
-            {seriesFilter && (
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs bg-primary/10 text-primary border border-primary/15">
-                {seriesFilter}
-                <button
-                  onClick={() => setSeriesFilter(null)}
-                  className="hover:text-primary/70 transition-colors"
-                >
-                  <X size={11} />
-                </button>
-              </span>
-            )}
-          </motion.div>
-        )}
-      </motion.div>
-
-      {/* ──────────────────────────────
+        {/* ──────────────────────────────
           Results Area
          ────────────────────────────── */}
-      <AnimatePresence mode="wait">
-        {showResults ? (
-          results.length > 0 ? (
+        <AnimatePresence mode="wait">
+          {isLibraryMode ? (
+            /* ─── Library Mode Results ─── */
+            libraryDisplayBooks.length > 0 ? (
+              <motion.div
+                key={`library-${groupMode}-${statusFilter}-${debouncedQuery}`}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.3 }}
+              >
+                {groupMode !== "none" ? (
+                  <GroupedShelves
+                    books={libraryDisplayBooks}
+                    groupBy={groupMode}
+                  />
+                ) : (
+                  <>
+                    <motion.div
+                      className="flex items-baseline justify-between mb-6"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ delay: 0.05, duration: 0.3 }}
+                    >
+                      <h2 className="text-xl md:text-2xl font-semibold tracking-tight font-(family-name:--font-dynapuff)">
+                        {showLibraryResults
+                          ? hasQuery
+                            ? "Search results"
+                            : "Filtered results"
+                          : "Browse your library"}
+                      </h2>
+                      <span className="text-xs text-muted-foreground">
+                        {libraryDisplayBooks.length}{" "}
+                        {libraryDisplayBooks.length === 1 ? "book" : "books"}
+                      </span>
+                    </motion.div>
+                    <FlatShelves books={libraryDisplayBooks} />
+                  </>
+                )}
+              </motion.div>
+            ) : (
+              <motion.div
+                key="library-empty"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+              >
+                <EmptyState
+                  query={debouncedQuery}
+                  hasFilters={!!hasActiveFilters}
+                  isStoreMode={false}
+                />
+              </motion.div>
+            )
+          ) : /* ─── Store Mode Results ─── */
+          loading ? (
+            <StoreLoadingState key="store-loading" />
+          ) : hasQuery && storeHasResults ? (
             <motion.div
-              key="results"
+              key={`store-${storeFilter}-${debouncedQuery}-${flag}`}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.3 }}
             >
-              {/* Results header */}
-              <motion.div
-                className="flex items-baseline justify-between mb-6"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.05, duration: 0.3 }}
-              >
-                <h2 className="text-xl md:text-2xl font-semibold tracking-tight font-[family-name:var(--font-dynapuff)]">
-                  {hasQuery ? "Search results" : "Filtered results"}
-                </h2>
-                <span className="text-xs text-muted-foreground">
-                  {results.length} {results.length === 1 ? "book" : "books"}
-                </span>
-              </motion.div>
-
-              {/* Shelves — max 5 per row */}
-              <SearchResultsShelves books={results} />
+              <StoreResults
+                storeFilter={storeFilter}
+                relevantBooks={relevant_books}
+                relevantAuthors={relevant_authors}
+                flag={flag}
+                debouncedQuery={debouncedQuery}
+                onAuthorClick={handleAuthorClick}
+              />
             </motion.div>
           ) : (
             <motion.div
-              key="empty"
+              key="store-empty"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
             >
               <EmptyState
                 query={debouncedQuery}
-                hasFilters={!!hasActiveFilters}
+                hasFilters={false}
+                isStoreMode
               />
             </motion.div>
-          )
-        ) : (
-          /* Idle State — show all books as browseable shelves */
-          <motion.div
-            key="idle"
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0 }}
-            transition={{ delay: 0.1, duration: 0.5, ease: [0.23, 1, 0.32, 1] }}
-          >
-            <SearchResultsShelves
-              books={allBooks}
-              shelfLabel="Browse your library"
-            />
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
+          )}
+        </AnimatePresence>
+      </div>
+    </SearchModeContext.Provider>
   );
 }

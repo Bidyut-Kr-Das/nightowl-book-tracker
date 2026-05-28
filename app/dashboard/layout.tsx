@@ -23,8 +23,16 @@ import {
 const navItems = [
   { href: "/dashboard", label: "All Books", icon: Library },
   { href: "/dashboard?status=READING", label: "Reading", icon: BookOpen },
-  { href: "/dashboard?status=COMPLETED", label: "Completed", icon: CheckCircle },
-  { href: "/dashboard?status=WANT_TO_READ", label: "Want to Read", icon: Heart },
+  {
+    href: "/dashboard?status=COMPLETED",
+    label: "Completed",
+    icon: CheckCircle,
+  },
+  {
+    href: "/dashboard?status=WANT_TO_READ",
+    label: "Want to Read",
+    icon: Heart,
+  },
   { href: "/dashboard?status=ON_HOLD", label: "On Hold", icon: Pause },
 ];
 
@@ -70,7 +78,7 @@ export default function DashboardLayout({
       {/* Sidebar */}
       <aside
         className={`
-          fixed lg:sticky top-0 left-0 z-50 h-screen w-[260px]
+          fixed lg:sticky top-0 left-0 z-50 h-screen w-65
           flex flex-col
           bg-sidebar border-r border-sidebar-border
           transition-transform duration-300
@@ -92,7 +100,7 @@ export default function DashboardLayout({
             >
               <Moon size={16} className="text-primary" strokeWidth={2.5} />
             </div>
-            <span className="text-lg font-semibold tracking-tight font-[family-name:var(--font-dynapuff)]">
+            <span className="text-lg font-semibold tracking-tight font-(family-name:--font-dynapuff)">
               NightOwl
             </span>
           </Link>
@@ -152,19 +160,11 @@ export default function DashboardLayout({
               }
             `}
           >
-            <Search size={18} strokeWidth={pathname === "/dashboard/search" ? 2.2 : 1.8} />
+            <Search
+              size={18}
+              strokeWidth={pathname === "/dashboard/search" ? 2.2 : 1.8}
+            />
             <span>Search</span>
-          </Link>
-
-          <div className="px-2 py-4 text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
-            Navigate
-          </div>
-          <Link
-            href="/"
-            className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-muted-foreground hover:text-foreground hover:bg-accent transition-all duration-200 active:scale-[0.98]"
-          >
-            <Home size={18} strokeWidth={1.8} />
-            <span>Landing Page</span>
           </Link>
         </nav>
 
@@ -190,7 +190,7 @@ export default function DashboardLayout({
       </aside>
 
       {/* Main content */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col h-screen overflow-auto min-w-0">
         {/* Mobile top bar */}
         <header className="sticky top-0 z-30 flex items-center gap-3 px-4 h-14 bg-background/80 backdrop-blur-xl border-b border-border lg:hidden">
           <button
@@ -199,13 +199,13 @@ export default function DashboardLayout({
           >
             <Menu size={20} />
           </button>
-          <span className="text-base font-semibold font-[family-name:var(--font-dynapuff)] tracking-tight">
+          <span className="text-base font-semibold font-(family-name:--font-dynapuff) tracking-tight">
             NightOwl
           </span>
         </header>
 
         {/* Page content */}
-        <main className="flex-1 px-4 md:px-6 lg:px-8 py-6 lg:py-8">
+        <main className="flex-1  px-4 md:px-6 lg:px-8 py-6 lg:py-8">
           {children}
         </main>
       </div>

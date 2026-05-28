@@ -1,4 +1,8 @@
-import { books, type Book, type BookStatus } from "./books-data";
+// import { books, type Book, type BookStatus } from "./books-data";
+
+import { IBook } from "@/types/interface";
+import { ReadingStatus } from "./generated/prisma/enums";
+import { useBookStore } from "@/store/book.store";
 
 /* ═══════════════════════════════════════════════
    Search & Filter Utilities
@@ -7,7 +11,7 @@ import { books, type Book, type BookStatus } from "./books-data";
 
 export interface SearchFilters {
   query: string;
-  status: BookStatus | null;
+  status: ReadingStatus | null;
   author: string | null;
   series: string | null;
 }
@@ -16,7 +20,8 @@ export interface SearchFilters {
  * Search and filter books by query and active filters.
  * Searches across: title, author, genre, series.
  */
-export function searchBooks(filters: SearchFilters): Book[] {
+export function searchBooks(books: IBook[], filters: SearchFilters): IBook[] {
+  // const { books } = useBookStore();
   let results = [...books];
 
   // Text search — across title, author, genre/category, series
@@ -25,9 +30,9 @@ export function searchBooks(filters: SearchFilters): Book[] {
     results = results.filter(
       (b) =>
         b.title.toLowerCase().includes(q) ||
-        b.author.toLowerCase().includes(q) ||
+        b.authors.some((author) => author.name.toLowerCase().includes(q)) ||
         b.genres.some((g) => g.toLowerCase().includes(q)) ||
-        (b.series && b.series.toLowerCase().includes(q))
+        (b.series && b.series.some((s) => s.name.toLowerCase().includes(q))),
     );
   }
 
@@ -38,12 +43,16 @@ export function searchBooks(filters: SearchFilters): Book[] {
 
   // Author filter
   if (filters.author) {
-    results = results.filter((b) => b.author === filters.author);
+    results = results.filter((b) =>
+      b.authors.some((author) => author.name === filters.author),
+    );
   }
 
   // Series filter
   if (filters.series) {
-    results = results.filter((b) => b.series === filters.series);
+    results = results.filter(
+      (b) => b.series && b.series.some((s) => s.name === filters.series),
+    );
   }
 
   return results;
@@ -52,19 +61,21 @@ export function searchBooks(filters: SearchFilters): Book[] {
 /**
  * Get all unique authors from the library.
  */
-export function getAllAuthors(): string[] {
+export function getAllAuthors(books: IBook[]): string[] {
   const authors = new Set<string>();
-  books.forEach((b) => authors.add(b.author));
+  books.forEach((b) => b.authors.forEach((author) => authors.add(author.name)));
   return Array.from(authors).sort();
 }
 
 /**
  * Get all unique series from the library.
  */
-export function getAllSeries(): string[] {
+export function getAllSeries(books: IBook[]): string[] {
   const seriesSet = new Set<string>();
   books.forEach((b) => {
-    if (b.series) seriesSet.add(b.series);
+    if (b.series) {
+      b.series.forEach((s) => seriesSet.add(s.name));
+    }
   });
   return Array.from(seriesSet).sort();
 }

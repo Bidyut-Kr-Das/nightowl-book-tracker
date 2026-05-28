@@ -1,16 +1,13 @@
 "use client";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useContext, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { motion, useMotionValue, useSpring, useTransform } from "motion/react";
-import { Search, X, ChevronRight } from "lucide-react";
-import {
-  books as allBooks,
-  getBooksByStatus,
-  getReadingStats,
-  type Book,
-} from "@/lib/books-data";
-import { useTheme } from "@/lib/theme-provider";
+import { motion, useMotionValue, useSpring } from "motion/react";
+import { IBook } from "@/types/interface";
+import { SearchModeContext } from "@/app/dashboard/search/page";
+// import {
+//   type Book
+// } from "@/lib/books-data";
 
 /* ═══════════════════════════════════
    SHELF BOOK — the core book element
@@ -21,10 +18,11 @@ export function ShelfBook({
   index,
   size = "md",
 }: {
-  book: Book;
+  book: IBook;
   index: number;
   size?: "sm" | "md" | "lg";
 }) {
+  const searchMode = useContext(SearchModeContext);
   const ref = useRef<HTMLDivElement>(null);
   const mouseX = useMotionValue(0);
   const mouseY = useMotionValue(0);
@@ -75,7 +73,10 @@ export function ShelfBook({
         ease: [0.23, 1, 0.32, 1],
       }}
     >
-      <Link href={`/books/${book.id}`} className="block group outline-none">
+      <Link
+        href={`/books/${book.slug}${searchMode === "store" ? "?mode=store" : ""}`}
+        className="block group outline-none"
+      >
         <motion.div
           ref={ref}
           onMouseMove={handleMouseMove}
@@ -92,16 +93,17 @@ export function ShelfBook({
           className="relative shrink-0 cursor-pointer z-0 hover:z-50"
         >
           {/* Cover */}
-          <div
-            className="relative rounded-lg"
-            style={{ width: w, height: h }}
-          >
+          <div className="relative rounded-lg" style={{ width: w, height: h }}>
             <Image
-              src={book.coverImage}
+              src={book.coverImage || "/placeholder-cover.png"}
               alt={book.title}
               fill
               className="object-cover"
               sizes={`${w}px`}
+              style={{
+                boxShadow:
+                  "-8px 5px 8px rgba(0,0,0,0.5),-5px 12px 18px rgba(0,0,0,0.2), -3px 4px 10px rgba(0,0,0,0.1)",
+              }}
             />
             {/* Spine highlight — left edge */}
             <div
@@ -138,7 +140,7 @@ export function ShelfBook({
               {book.title}
             </p>
             <p className="text-[10px] text-muted-foreground mt-0.5 truncate">
-              {book.author}
+              {book.authors.join(", ")}
             </p>
           </div>
         )}
@@ -188,7 +190,7 @@ export function ShelfRow({
   delay = 0,
 }: {
   title: string;
-  books: Book[];
+  books: IBook[];
   bookSize?: "sm" | "md" | "lg";
   delay?: number;
 }) {
@@ -241,7 +243,7 @@ export function ShelfRow({
 /* ═══════════════════════════════════
    READING PROGRESS — compact inline
    ═══════════════════════════════════ */
-export function ReadingProgressCard({ book }: { book: Book }) {
+export function ReadingProgressCard({ book }: { book: IBook }) {
   return (
     <Link
       href={`/books/${book.id}`}
@@ -249,7 +251,7 @@ export function ReadingProgressCard({ book }: { book: Book }) {
     >
       <div className="relative w-10 h-14 rounded-[3px] overflow-hidden shrink-0 book-shadow">
         <Image
-          src={book.coverImage}
+          src={book.coverImage || "/placeholder-cover.png"}
           alt={book.title}
           fill
           className="object-cover"
@@ -261,7 +263,7 @@ export function ReadingProgressCard({ book }: { book: Book }) {
           {book.title}
         </p>
         <p className="text-[11px] text-muted-foreground truncate">
-          {book.author}
+          {book.authors.join(", ")}
         </p>
         <div className="flex items-center gap-2 mt-1.5">
           <div className="flex-1 h-1 rounded-full bg-muted overflow-hidden max-w-30">

@@ -48,7 +48,7 @@ export default function RootLayout({
       )}
       data-scroll-behavior="smooth"
     >
-      <body className="min-h-full flex flex-col overflow-x-hidden">
+      <body className="min-h-full flex flex-col overflow-hidden">
         <ThemeProvider>{children}</ThemeProvider>
       </body>
     </html>

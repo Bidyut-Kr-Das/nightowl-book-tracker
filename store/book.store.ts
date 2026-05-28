@@ -1,0 +1,114 @@
+import { books as dummyBooks } from "@/lib/books-data";
+import { Author } from "@/lib/generated/prisma/client";
+import { ReadingStatus } from "@/lib/generated/prisma/enums";
+import { getAllBooks, searchBookStore } from "@/server/book.action";
+import { IBook } from "@/types/interface";
+import { create } from "zustand";
+
+export type BookState = {
+  //default
+  loading: boolean;
+  error: string | null;
+
+  //library
+  books: IBook[];
+  authors: Pick<Author, "name" | "hardcoverId">[];
+
+  //store
+  relevant_authors: Pick<Author, "name" | "bio" | "image">[];
+  relevant_books: IBook[];
+  relevant_series: any[];
+  flag: "BOOK_RESULT" | "AUTHOR_RESULT" | "SERIES_RESULT" | null;
+};
+
+const initialState: BookState = {
+  books: dummyBooks,
+  authors: [],
+  loading: false,
+  error: null,
+  relevant_books: [],
+  relevant_authors: [],
+  relevant_series: [],
+  flag: null,
+};
+
+type BookActions = {
+  browseStoreBooks: ({ query }: { query: string }) => Promise<void>;
+  browseStoreAuthors: ({ query }: { query: string }) => Promise<void>;
+  browseStoreSeries: ({ query }: { query: string }) => Promise<void>;
+
+  getAllLibraryBooks: () => Promise<void>;
+};
+
+type BookStore = BookState & BookActions;
+
+export const useBookStore = create<BookStore>((set) => ({
+  ...initialState,
+  getAllLibraryBooks: async () => {
+    set({ loading: true, error: null });
+
+    try {
+      const result = await getAllBooks();
+      set({ books: result, loading: false });
+      const authors: Map<
+        number,
+        Pick<Author, "hardcoverId" | "name" | "image">
+      > = new Map();
+
+      result
+        .flatMap((b) => b.authors)
+        .forEach((a) => {
+          authors.set(a.hardcoverId!, a);
+        });
+      set({ authors: result.flatMap((b) => b.authors) });
+    } catch (error) {
+      console.error("Failed to fetch books:", error);
+      set({ error: "Failed to fetch books", loading: false });
+    }
+    set({ loading: false });
+  },
+
+  browseStoreBooks: async ({ query }) => {
+    set({
+      relevant_authors: [],
+      relevant_books: [],
+      loading: true,
+      flag: null,
+    });
+    const response = await searchBookStore(query, "Book");
+    if (response.flag === "BOOK_RESULT") {
+      set({
+        relevant_books: response.books,
+        flag: response.flag,
+      });
+    }
+    set({ loading: false });
+  },
+  browseStoreAuthors: async ({ query }) => {
+    set({
+      relevant_authors: [],
+      relevant_books: [],
+      loading: true,
+    });
+    const response = await searchBookStore(query, "Author");
+    // console.log(response.flag);
+    if (response.flag === "BOOK_RESULT") {
+      set({
+        relevant_books: response.books,
+        flag: response.flag,
+      });
+    } else if (response.flag === "AUTHOR_RESULT") {
+      set({
+        relevant_authors: response.authors,
+        flag: response.flag,
+      });
+    }
+    set({ loading: false });
+  },
+  browseStoreSeries: async ({ query }) => {
+    //work in progress
+    // set({});
+  },
+
+  getBooksByStatus: (status: ReadingStatus) => {},
+}));

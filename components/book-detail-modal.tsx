@@ -4,10 +4,13 @@ import { useState, useEffect } from "react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "motion/react";
 import { X, BookOpen, Calendar, Hash, Star, Clock } from "lucide-react";
-import type { Book } from "@/lib/books-data";
+import { IBook } from "@/types/interface";
+import { ReadingStatus } from "@/lib/generated/prisma/enums";
+import { format } from "date-fns";
+// import type { Book } from "@/lib/books-data";
 
 interface BookDetailModalProps {
-  book: Book | null;
+  book: IBook | null;
   isOpen: boolean;
   onClose: () => void;
 }
@@ -91,7 +94,7 @@ export default function BookDetailModal({
 
               {/* Ambient glow behind cover */}
               <div
-                className="absolute top-0 left-0 right-0 h-[300px] pointer-events-none"
+                className="absolute top-0 left-0 right-0 h-75 pointer-events-none"
                 style={{
                   background:
                     "radial-gradient(ellipse 400px 250px at 30% 20%, oklch(0.82 0.12 70 / 6%), transparent)",
@@ -102,7 +105,7 @@ export default function BookDetailModal({
                 <div className="flex flex-col md:flex-row gap-8 md:gap-12">
                   {/* Large cover */}
                   <motion.div
-                    className="flex-shrink-0 mx-auto md:mx-0"
+                    className="shrink-0 mx-auto md:mx-0"
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{
@@ -111,7 +114,7 @@ export default function BookDetailModal({
                       ease: [0.23, 1, 0.32, 1],
                     }}
                   >
-                    <div className="relative w-[200px] h-[300px] md:w-[220px] md:h-[330px] rounded-md overflow-hidden book-shadow">
+                    <div className="relative w-50 h-75 md:w-55 md:h-82.5 rounded-md overflow-hidden book-shadow">
                       {!imageLoaded && (
                         <div
                           className="absolute inset-0"
@@ -124,8 +127,8 @@ export default function BookDetailModal({
                         />
                       )}
                       <Image
-                        src={book.coverImage}
-                        alt={`${book.title} by ${book.author}`}
+                        src={book.coverImage || "/placeholder-cover.png"}
+                        alt={`${book.title} by ${book.authors.join(", ")}`}
                         fill
                         className={`object-cover transition-opacity duration-500 ${imageLoaded ? "opacity-100" : "opacity-0"}`}
                         sizes="220px"
@@ -134,7 +137,7 @@ export default function BookDetailModal({
                       />
                       {/* Spine */}
                       <div
-                        className="absolute left-0 top-0 bottom-0 w-[4px]"
+                        className="absolute left-0 top-0 bottom-0 w-1"
                         style={{
                           background:
                             "linear-gradient(to right, rgba(0,0,0,0.5), rgba(0,0,0,0.15))",
@@ -142,7 +145,7 @@ export default function BookDetailModal({
                       />
                       {/* Page edges */}
                       <div
-                        className="absolute right-0 top-[3px] bottom-[3px] w-[5px]"
+                        className="absolute right-0 top-0.75 bottom-0.75 w-1.25"
                         style={{
                           background:
                             "repeating-linear-gradient(to bottom, rgba(255,255,255,0.07) 0px, rgba(255,255,255,0.02) 1px, rgba(0,0,0,0.04) 2px)",
@@ -164,41 +167,41 @@ export default function BookDetailModal({
                   >
                     {book.series && (
                       <p className="text-sm text-lamp/70 mb-1 tracking-wide uppercase font-medium">
-                        {book.series}
-                        {book.seriesOrder && ` · Book ${book.seriesOrder}`}
+                        {book.series[0].name}
+                        {/* {book.seriesOrder && ` · Book ${book.seriesOrder}`} */}
                       </p>
                     )}
 
-                    <h2 className="text-3xl md:text-4xl font-light tracking-tight leading-tight font-[family-name:var(--font-display)]">
+                    <h2 className="text-3xl md:text-4xl font-light tracking-tight leading-tight font-(family-name:--font-display)">
                       {book.title}
                     </h2>
 
                     <p className="text-lg text-muted-foreground mt-2 font-light">
-                      by {book.author}
+                      by {book.authors.join(", ")}
                     </p>
 
                     {/* Rating */}
-                    {book.rating && (
+                    {book.averageRating && (
                       <div className="flex items-center gap-1.5 mt-4">
                         {Array.from({ length: 5 }).map((_, i) => (
                           <Star
                             key={i}
                             size={16}
                             className={
-                              i < book.rating!
+                              i < Math.floor(book.averageRating!)
                                 ? "text-lamp fill-lamp"
                                 : "text-muted-foreground/20"
                             }
                           />
                         ))}
                         <span className="text-sm text-muted-foreground ml-2">
-                          {book.rating}/5
+                          {book.averageRating}/5
                         </span>
                       </div>
                     )}
 
                     {/* Reading progress */}
-                    {book.status === "reading" &&
+                    {book.status === ReadingStatus.READING &&
                       book.progress !== undefined && (
                         <div className="mt-6">
                           <div className="flex items-center justify-between text-sm mb-2">
@@ -226,11 +229,11 @@ export default function BookDetailModal({
                               }}
                             />
                           </div>
-                          {book.currentPage && book.totalPages && (
+                          {/* {book.currentPage && book.totalPages && (
                             <p className="text-xs text-muted-foreground mt-1.5">
                               Page {book.currentPage} of {book.totalPages}
                             </p>
-                          )}
+                          )} */}
                         </div>
                       )}
 
@@ -247,24 +250,24 @@ export default function BookDetailModal({
                       ))}
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         <Calendar size={12} className="text-lamp/50" />
-                        {book.publishedYear}
+                        {format(book.releaseDate!, "MMMM dd yy")}
                       </div>
-                      {book.totalPages && (
+                      {book.pages && (
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
                           <BookOpen size={12} className="text-lamp/50" />
-                          {book.totalPages} pages
+                          {book.pages} pages
                         </div>
                       )}
-                      {book.dateStarted && (
+                      {/* {book.addedAt && (
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
                           <Clock size={12} className="text-lamp/50" />
                           Started{" "}
                           {new Date(book.dateStarted).toLocaleDateString(
                             "en-US",
-                            { month: "short", day: "numeric" }
+                            { month: "short", day: "numeric" },
                           )}
                         </div>
-                      )}
+                      )} */}
                     </div>
 
                     {/* Description */}
@@ -285,15 +288,15 @@ export default function BookDetailModal({
                         className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium"
                         style={{
                           background:
-                            book.status === "reading"
+                            book.status === ReadingStatus.READING
                               ? "oklch(0.82 0.12 70 / 12%)"
-                              : book.status === "completed"
+                              : book.status === ReadingStatus.COMPLETED
                                 ? "oklch(0.65 0.15 145 / 12%)"
                                 : "oklch(0.60 0.10 260 / 12%)",
                           color:
-                            book.status === "reading"
+                            book.status === ReadingStatus.READING
                               ? "oklch(0.82 0.12 70)"
-                              : book.status === "completed"
+                              : book.status === ReadingStatus.COMPLETED
                                 ? "oklch(0.72 0.12 145)"
                                 : "oklch(0.70 0.08 260)",
                         }}
@@ -302,16 +305,16 @@ export default function BookDetailModal({
                           className="w-1.5 h-1.5 rounded-full"
                           style={{
                             background:
-                              book.status === "reading"
+                              book.status === ReadingStatus.READING
                                 ? "oklch(0.82 0.12 70)"
-                                : book.status === "completed"
+                                : book.status === ReadingStatus.COMPLETED
                                   ? "oklch(0.72 0.12 145)"
                                   : "oklch(0.70 0.08 260)",
                           }}
                         />
-                        {book.status === "reading"
+                        {book.status === ReadingStatus.READING
                           ? "Currently Reading"
-                          : book.status === "completed"
+                          : book.status === ReadingStatus.COMPLETED
                             ? "Completed"
                             : "On Wishlist"}
                       </span>

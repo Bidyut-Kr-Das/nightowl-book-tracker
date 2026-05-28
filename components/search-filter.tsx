@@ -3,11 +3,13 @@
 import { useState, useMemo, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Search, X, SlidersHorizontal } from "lucide-react";
-import type { Book } from "@/lib/books-data";
-import { books, getAllGenres } from "@/lib/books-data";
+// import type { Book } from "@/lib/books-data";
+import { books } from "@/lib/books-data";
+import { IBook } from "@/types/interface";
+import { getAllGenres } from "@/utils/bookUtils";
 
 interface SearchFilterProps {
-  onResultsChange: (books: Book[]) => void;
+  onResultsChange: (books: IBook[]) => void;
   isOpen: boolean;
   onToggle: () => void;
 }
@@ -21,7 +23,7 @@ export default function SearchFilter({
   const [selectedGenre, setSelectedGenre] = useState<string | null>(null);
   const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
 
-  const genres = useMemo(() => getAllGenres(), []);
+  const genres = useMemo(() => getAllGenres({ books }), []);
 
   const filtered = useMemo(() => {
     let result = [...books];
@@ -31,9 +33,9 @@ export default function SearchFilter({
       result = result.filter(
         (b) =>
           b.title.toLowerCase().includes(q) ||
-          b.author.toLowerCase().includes(q) ||
+          (b.authors && b.authors.some((a) => a.name.toLowerCase().includes(q))) ||
           b.genres.some((g) => g.toLowerCase().includes(q)) ||
-          (b.series && b.series.toLowerCase().includes(q))
+          (b.series && b.series.some((s) => s.name.toLowerCase().includes(q))),
       );
     }
 
@@ -64,10 +66,7 @@ export default function SearchFilter({
   return (
     <div className="relative">
       {/* Search trigger bar */}
-      <motion.div
-        className="flex items-center gap-3"
-        layout
-      >
+      <motion.div className="flex items-center gap-3" layout>
         <div
           className="flex-1 flex items-center gap-3 h-11 px-4 rounded-xl cursor-text"
           style={{
@@ -141,9 +140,7 @@ export default function SearchFilter({
                   <button
                     key={genre}
                     onClick={() =>
-                      setSelectedGenre(
-                        selectedGenre === genre ? null : genre
-                      )
+                      setSelectedGenre(selectedGenre === genre ? null : genre)
                     }
                     className={`px-3 py-1.5 rounded-lg text-xs transition-all duration-200 active:scale-95 ${
                       selectedGenre === genre
@@ -168,7 +165,7 @@ export default function SearchFilter({
                     key={s.value}
                     onClick={() =>
                       setSelectedStatus(
-                        selectedStatus === s.value ? null : s.value
+                        selectedStatus === s.value ? null : s.value,
                       )
                     }
                     className={`px-3 py-1.5 rounded-lg text-xs transition-all duration-200 active:scale-95 ${
