@@ -35,20 +35,20 @@ export default function DashboardPage() {
       getReadingStats({
         books: allBooks,
       }),
-    [],
+    [allBooks],
   );
   const currentlyReading = useMemo(
     () => getBooksByStatus({ books: allBooks, status: ReadingStatus.READING }),
-    [],
+    [allBooks],
   );
   const completed = useMemo(
     () =>
       getBooksByStatus({ books: allBooks, status: ReadingStatus.COMPLETED }),
-    [],
+    [allBooks],
   );
   const wishlist = useMemo(
     () => getBooksByStatus({ books: allBooks, status: ReadingStatus.WISHLIST }),
-    [],
+    [allBooks],
   );
 
   // Search

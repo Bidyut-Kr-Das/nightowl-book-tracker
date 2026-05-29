@@ -104,6 +104,7 @@ export function ShelfBook({
                 boxShadow:
                   "-8px 5px 8px rgba(0,0,0,0.5),-5px 12px 18px rgba(0,0,0,0.2), -3px 4px 10px rgba(0,0,0,0.1)",
               }}
+              loading="eager"
             />
             {/* Spine highlight — left edge */}
             <div

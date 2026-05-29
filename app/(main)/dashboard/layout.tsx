@@ -19,6 +19,8 @@ import {
   Home,
   Search,
 } from "lucide-react";
+import Image from "next/image";
+import { useBookStore } from "@/store/book.store";
 
 const navItems = [
   { href: "/dashboard", label: "All Books", icon: Library },
@@ -44,6 +46,7 @@ export default function DashboardLayout({
   const pathname = usePathname();
   const { theme, toggleTheme } = useTheme();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { getAllLibraryBooks, books } = useBookStore();
 
   // Close sidebar on route change (mobile)
   useEffect(() => {
@@ -57,6 +60,15 @@ export default function DashboardLayout({
     }
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
+  }, []);
+
+  //fetch book if the array is empty
+  useEffect(() => {
+    if (!books.length) {
+      (async () => {
+        await getAllLibraryBooks();
+      })();
+    }
   }, []);
 
   return (
@@ -91,15 +103,21 @@ export default function DashboardLayout({
         {/* Logo */}
         <div className="flex items-center justify-between p-5 pb-3">
           <Link href="/" className="flex items-center gap-2.5 group">
-            <div
+            {/* <div
               className="w-9 h-9 rounded-xl flex items-center justify-center transition-transform duration-200 group-hover:scale-105 group-active:scale-95"
               style={{
                 background: "oklch(from var(--primary) l c h / 12%)",
                 border: "1px solid oklch(from var(--primary) l c h / 15%)",
               }}
             >
-              <Moon size={16} className="text-primary" strokeWidth={2.5} />
-            </div>
+              
+            </div> */}
+            <Image
+              src={"/android-chrome-512x512.png"}
+              width={24}
+              height={24}
+              alt="logo"
+            />
             <span className="text-lg font-semibold tracking-tight font-(family-name:--font-dynapuff)">
               NightOwl
             </span>

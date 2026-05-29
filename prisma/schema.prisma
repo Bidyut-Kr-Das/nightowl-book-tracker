@@ -41,6 +41,8 @@ model Book {
   ratingsCount  Int    @default(0)
   reviewsCount  Int    @default(0)
 
+  indexInSeries Int @default(0)
+
   // Categorization
 
   // Extra metadata
@@ -120,8 +122,9 @@ model UserBook {
   userId Int
   bookId Int
 
-  status   ReadingStatus
-  progress Int? // current page
+  status    ReadingStatus
+  progress  Int? // current page
+  bookImage String?
 
   startedAt  DateTime?
   finishedAt DateTime?

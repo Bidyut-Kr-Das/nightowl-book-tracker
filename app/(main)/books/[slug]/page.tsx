@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useEffect, useMemo } from "react";
+import { use, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
@@ -16,6 +16,7 @@ import {
   Download,
   ExternalLink,
   Hash,
+  Heart,
   Layers,
   Share2,
   Star,
@@ -27,13 +28,8 @@ import { getBookById, getBookBySlug } from "@/utils/bookUtils";
 import { useBookStore } from "@/store/book.store";
 import { ReadingStatus } from "@/lib/generated/prisma/enums";
 import { format } from "date-fns";
-
-const statusLabels: Record<string, string> = {
-  reading: "Continue reading",
-  completed: "Read again",
-  wishlist: "Start reading",
-  unread: "Start reading",
-};
+import { BookDetailsLoading } from "./_components/book-details-loading";
+import BookFormDialog from "@/components/book-form-dialog/book-form-dialog";
 
 const statusDescriptions: Record<string, string> = {
   reading: "You're currently making your way through this one.",
@@ -85,35 +81,48 @@ export default function BookDetailPage({
   const searchParams = useSearchParams();
   const mode = searchParams.get("mode");
   const router = useRouter();
-  const { setTheme } = useTheme();
-  const { books, relevant_books, addBookToLibrary } = useBookStore();
+  const [localLoading, setLocalLoading] = useState(true);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const { books, relevant_books, addBookToLibrary, getSharedBook, sharedBook } =
+    useBookStore();
 
-  // useEffect(() => {
-  //   setTheme("light");
-  // }, [setTheme]);
-
-  const book = getBookBySlug({
-    books: mode === "store" ? relevant_books : books,
-    slug,
-  });
-
-  console.log("book", book);
+  useEffect(() => {
+    if (mode === "share") {
+      (async () => {
+        await getSharedBook(slug);
+        setLocalLoading(false);
+      })();
+    } else {
+      setLocalLoading(false);
+    }
+  }, [mode]);
 
   // Spring tilt for cover — decorative mouse tracking
   const rotateY = useSpring(0, { stiffness: 120, damping: 18 });
   const rotateX = useSpring(0, { stiffness: 120, damping: 18 });
+  if (localLoading) {
+    return <BookDetailsLoading />;
+  }
+  const book =
+    mode === "share"
+      ? sharedBook
+      : getBookBySlug({
+          books: mode === "store" ? relevant_books : books,
+          slug,
+        });
 
-  const relatedBooks = useMemo(() => {
-    if (!book) return [];
-    return books
-      .filter((b) => b.id !== book.id)
-      .filter(
-        (b) =>
-          (book.series && b.series === book.series) ||
-          b.genres.some((g) => book.genres.includes(g)),
-      )
-      .slice(0, 4);
-  }, [book]);
+  console.log("book", book);
+  
+  const relatedBooks = !book
+    ? []
+    : books
+        .filter((b) => b.id !== book.id)
+        .filter(
+          (b) =>
+            (book.series && b.series === book.series) ||
+            b.genres.some((g) => book.genres.includes(g)),
+        )
+        .slice(0, 4);
 
   if (!book) {
     return (
@@ -160,7 +169,9 @@ export default function BookDetailPage({
     if (book && mode === "store")
       toast.promise(
         addBookToLibrary({
-          hardCoverBookId: book.id ? Number(book.id) : Number(book.hardcoverId),
+          hardCoverBookId: book.hardcoverId
+            ? Number(book.hardcoverId)
+            : Number(book.id),
         }),
         {
           loading: "Adding the book to library",
@@ -320,7 +331,7 @@ export default function BookDetailPage({
                   key={i}
                   size={16}
                   className={
-                    i+1 < book.averageRating!
+                    i + 1 < book.averageRating!
                       ? "text-amber-400 fill-amber-400"
                       : "text-muted-foreground/15"
                   }
@@ -342,25 +353,34 @@ export default function BookDetailPage({
             {/* Primary CTA */}
             <button
               className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-foreground text-background text-sm font-medium hover:bg-foreground/90 transition-all duration-200 active:scale-95"
-              onClick={performAction}
+              onClick={mode === "store" ? performAction : () => setEditDialogOpen(true)}
             >
-              {statusLabels[book.status] ?? "Add to Library"}
+              {mode === "store" ? "Add to Library" : "Update Details"}
               <ArrowUpRight size={14} />
             </button>
 
             {/* Icon actions */}
             <button
               className="w-10 h-10 rounded-full border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:border-foreground/20 transition-all duration-200 active:scale-95"
-              title="Bookmark"
+              title="Favourite"
             >
-              <Bookmark size={16} />
+              <Heart size={16} />
             </button>
-            <button
-              className="w-10 h-10 rounded-full border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:border-foreground/20 transition-all duration-200 active:scale-95"
-              title="Share"
-            >
-              <Share2 size={16} />
-            </button>
+            {mode !== "store" ? (
+              <button
+                className="w-10 h-10 rounded-full border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:border-foreground/20 transition-all duration-200 active:scale-95"
+                title="Share"
+              >
+                <Share2 size={16} />
+              </button>
+            ) : (
+              <button
+                className="w-10 h-10 rounded-full border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:border-foreground/20 transition-all duration-200 active:scale-95"
+                title="Share"
+              >
+                <Share2 size={16} />
+              </button>
+            )}
           </motion.div>
         </div>
       </div>
@@ -550,6 +570,13 @@ export default function BookDetailPage({
           </div>
         </motion.div>
       )}
+      {/* ═══ Edit Dialog ═══ */}
+      <BookFormDialog
+        mode="edit"
+        book={book}
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+      />
     </div>
   );
 }

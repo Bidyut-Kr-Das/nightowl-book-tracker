@@ -1,9 +1,10 @@
 import { books as dummyBooks } from "@/lib/books-data";
-import { Author } from "@/lib/generated/prisma/client";
+import { Author, Series } from "@/lib/generated/prisma/client";
 import { ReadingStatus } from "@/lib/generated/prisma/enums";
 import {
   addBookToLibraryAction,
   getAllBooks,
+  getBookBySlugAction,
   searchBookStore,
 } from "@/server/book.action";
 import { IBook } from "@/types/interface";
@@ -16,24 +17,30 @@ export type BookState = {
 
   //library
   books: IBook[];
-  authors: Pick<Author, "name" | "hardcoverId">[];
+  authors: Pick<Author, "name" | "hardcoverId" | "image">[];
+  series: Pick<Series, "hardcoverId" | "name" | "description">[];
 
   //store
   relevant_authors: Pick<Author, "name" | "bio" | "image">[];
   relevant_books: IBook[];
   relevant_series: any[];
   flag: "BOOK_RESULT" | "AUTHOR_RESULT" | "SERIES_RESULT" | null;
+
+  //share
+  sharedBook: IBook | null;
 };
 
 const initialState: BookState = {
   books: [],
   authors: [],
+  series: [],
   loading: false,
   error: null,
   relevant_books: [],
   relevant_authors: [],
   relevant_series: [],
   flag: null,
+  sharedBook: null,
 };
 
 type BookActions = {
@@ -42,6 +49,8 @@ type BookActions = {
   browseStoreSeries: ({ query }: { query: string }) => Promise<void>;
 
   addBookToLibrary: ({}: { hardCoverBookId: number }) => Promise<void>;
+
+  getSharedBook: (slug: string) => Promise<void>;
 
   getAllLibraryBooks: () => Promise<void>;
 };
@@ -60,13 +69,27 @@ export const useBookStore = create<BookStore>((set) => ({
         number,
         Pick<Author, "hardcoverId" | "name" | "image">
       > = new Map();
+      const series: Map<
+        number,
+        Pick<Series, "hardcoverId" | "name" | "description">
+      > = new Map();
 
       result
         .flatMap((b) => b.authors)
         .forEach((a) => {
           authors.set(a.hardcoverId!, a);
         });
-      set({ authors: result.flatMap((b) => b.authors) });
+      result
+        .flatMap((b) => b.series)
+        .filter((s) => s !== null)
+        .forEach((s) => {
+          series.set(s?.hardcoverId!, s);
+        });
+
+      set({
+        authors: Array.from(authors.values()),
+        series: Array.from(series.values()),
+      });
     } catch (error) {
       console.error("Failed to fetch books:", error);
       set({ error: "Failed to fetch books", loading: false });
@@ -119,13 +142,21 @@ export const useBookStore = create<BookStore>((set) => ({
   addBookToLibrary: async ({ hardCoverBookId }) => {
     // set({ loading: true });
     const res = await addBookToLibraryAction([hardCoverBookId]);
-    if(!res){
-      return 
+    if (!res) {
+      return;
     }
     set((state) => ({
       ...state,
       books: [...state.books, ...res],
     }));
+  },
+  getSharedBook: async (slug) => {
+    set({ loading: true });
+    const res = await getBookBySlugAction(slug);
+    set({
+      sharedBook: res ?? null,
+      loading: false,
+    });
   },
 
   getBooksByStatus: (status: ReadingStatus) => {},
