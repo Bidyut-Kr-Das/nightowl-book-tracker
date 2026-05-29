@@ -133,7 +133,7 @@ function ModeToggle({
   onChange: (mode: SearchMode) => void;
 }) {
   return (
-    <div className="inline-flex items-center gap-1 p-1 rounded-2xl bg-muted/60 border border-border">
+    <div className="flex items-center justify-evenly gap-1 p-1 rounded-2xl bg-muted/60 border border-border">
       {(["library", "store"] as const).map((option) => {
         const isActive = mode === option;
         const Icon = option === "library" ? Library : Store;
@@ -144,7 +144,7 @@ function ModeToggle({
             key={option}
             onClick={() => onChange(option)}
             className={`
-              relative flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium
+              relative flex items-center w-full justify-center gap-2 px-4 py-2 rounded-xl text-sm font-medium
               transition-colors duration-200 active:scale-[0.97]
               ${isActive ? "text-primary" : "text-muted-foreground hover:text-foreground"}
             `}
@@ -766,9 +766,7 @@ export default function SearchPage() {
   const searchParams = useSearchParams();
 
   // ── Initialize state from URL search params (restores on back-nav) ──
-  const [query, setQuery] = useState(
-    () => searchParams.get("q") || "",
-  );
+  const [query, setQuery] = useState(() => searchParams.get("q") || "");
   const [statusFilter, setStatusFilter] = useState<ReadingStatus | null>(null);
   const [groupMode, setGroupMode] = useState<GroupMode>("none");
   const [filtersExpanded, setFiltersExpanded] = useState(false);
