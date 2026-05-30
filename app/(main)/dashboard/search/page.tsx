@@ -902,16 +902,16 @@ export default function SearchPage() {
   }, []);
 
   // Auto-focus search input on mount
-  useEffect(() => {
-    const timer = setTimeout(() => inputRef.current?.focus(), 300);
-    return () => clearTimeout(timer);
-  }, []);
+  // useEffect(() => {
+  //   const timer = setTimeout(() => inputRef.current?.focus(), 300);
+  //   return () => clearTimeout(timer);
+  // }, []);
 
-  // Re-focus when switching modes
-  useEffect(() => {
-    const timer = setTimeout(() => inputRef.current?.focus(), 150);
-    return () => clearTimeout(timer);
-  }, [searchMode]);
+  // // Re-focus when switching modes
+  // useEffect(() => {
+  //   const timer = setTimeout(() => inputRef.current?.focus(), 150);
+  //   return () => clearTimeout(timer);
+  // }, [searchMode]);
 
   const searchPlaceholder = isLibraryMode
     ? "Search titles, authors, genres, series…"
@@ -1039,25 +1039,6 @@ export default function SearchPage() {
                 {/* Top row: filter toggle + group-by buttons + clear */}
                 <div className="flex items-center gap-2 flex-wrap mb-3">
                   {/* Filters toggle */}
-                  <button
-                    onClick={() => setFiltersExpanded(!filtersExpanded)}
-                    className={`
-                    flex items-center gap-2 px-3 py-2 rounded-xl text-sm transition-all duration-200 active:scale-[0.97]
-                    ${
-                      filtersExpanded || statusFilter
-                        ? "bg-primary/10 text-primary"
-                        : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
-                    }
-                  `}
-                  >
-                    <Filter size={15} strokeWidth={2} />
-                    <span className="font-medium">Filters</span>
-                    {statusFilter && (
-                      <span className="ml-0.5 w-5 h-5 rounded-full bg-primary text-primary-foreground text-[10px] font-semibold flex items-center justify-center">
-                        1
-                      </span>
-                    )}
-                  </button>
 
                   {/* Separator dot */}
                   <span className="w-1 h-1 rounded-full bg-border shrink-0 hidden sm:block" />
@@ -1079,6 +1060,26 @@ export default function SearchPage() {
                       setGroupMode(groupMode === "series" ? "none" : "series")
                     }
                   />
+
+                  <button
+                    onClick={() => setFiltersExpanded(!filtersExpanded)}
+                    className={`
+                    flex items-center gap-2 px-3 py-2 rounded-xl text-sm transition-all duration-200 active:scale-[0.97]
+                    ${
+                      filtersExpanded || statusFilter
+                        ? "bg-primary/10 text-primary"
+                        : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
+                    }
+                  `}
+                  >
+                    <Filter size={15} strokeWidth={2} />
+                    <span className="font-medium">Filters</span>
+                    {statusFilter && (
+                      <span className="ml-0.5 w-5 h-5 rounded-full bg-primary text-primary-foreground text-[10px] font-semibold flex items-center justify-center">
+                        1
+                      </span>
+                    )}
+                  </button>
 
                   {/* Spacer + Clear all */}
                   {hasActiveFilters && (

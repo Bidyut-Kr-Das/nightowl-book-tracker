@@ -141,7 +141,7 @@ export function ShelfBook({
               {book.title}
             </p>
             <p className="text-[10px] text-muted-foreground mt-0.5 truncate">
-              {book.authors.join(", ")}
+              {book.authors.map((a) => a.name).join(", ")}
             </p>
           </div>
         )}
@@ -264,7 +264,7 @@ export function ReadingProgressCard({ book }: { book: IBook }) {
           {book.title}
         </p>
         <p className="text-[11px] text-muted-foreground truncate">
-          {book.authors.join(", ")}
+          {book.authors.map((a) => a.name).join(", ")}
         </p>
         <div className="flex items-center gap-2 mt-1.5">
           <div className="flex-1 h-1 rounded-full bg-muted overflow-hidden max-w-30">

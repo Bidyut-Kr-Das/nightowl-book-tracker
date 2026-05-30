@@ -160,7 +160,7 @@ export default function DashboardPage() {
           />
 
           {/* Reading Progress — compact sidebar-style list */}
-          {currentlyReading.length > 0 && (
+          {/* {currentlyReading.length > 0 && (
             <motion.section
               className="mb-12 md:mb-16"
               initial={{ opacity: 0 }}
@@ -176,7 +176,7 @@ export default function DashboardPage() {
                 ))}
               </div>
             </motion.section>
-          )}
+          )} */}
 
           {/* Wishlist / Next Up */}
           <ShelfRow

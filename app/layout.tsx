@@ -4,6 +4,8 @@ import "./globals.css";
 import { cn } from "@/lib/utils";
 import { ThemeProvider } from "@/lib/theme-provider";
 import { ClerkProvider } from "@clerk/nextjs";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { MobileDock } from "@/components/mobile-dock";
 
 const displayFont = Cormorant_Garamond({
   subsets: ["latin"],
@@ -27,7 +29,7 @@ const playfulFont = DynaPuff({
 });
 
 export const metadata: Metadata = {
-  title: "NightOwl — Your Personal Bookshelf",
+  title: "NightOwl",
   description:
     "A premium digital bookshelf experience. Track your reading journey with NightOwl.",
 };
@@ -69,9 +71,14 @@ export default function RootLayout({
         />
         <link rel="manifest" href="/site.webmanifest"></link>
       </head>
-      <body className="min-h-full flex flex-col overflow-hidden">
+      <body className="min-h-dvh max-h-dvh relative flex flex-col ">
         <ClerkProvider>
-          <ThemeProvider>{children}</ThemeProvider>
+          <ThemeProvider>
+            <TooltipProvider>
+              {children}
+              <MobileDock />
+            </TooltipProvider>
+          </ThemeProvider>
         </ClerkProvider>
       </body>
     </html>

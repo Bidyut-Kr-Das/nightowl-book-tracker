@@ -14,5 +14,5 @@ export default function mainLayout({
     getAllLibraryBooks();
   }, []);
 
-  return <>{children};</>;
+  return <>{children}</>;
 }

@@ -24,18 +24,18 @@ import { useBookStore } from "@/store/book.store";
 
 const navItems = [
   { href: "/dashboard", label: "All Books", icon: Library },
-  { href: "/dashboard?status=READING", label: "Reading", icon: BookOpen },
-  {
-    href: "/dashboard?status=COMPLETED",
-    label: "Completed",
-    icon: CheckCircle,
-  },
-  {
-    href: "/dashboard?status=WANT_TO_READ",
-    label: "Want to Read",
-    icon: Heart,
-  },
-  { href: "/dashboard?status=ON_HOLD", label: "On Hold", icon: Pause },
+  // { href: "/dashboard?status=READING", label: "Reading", icon: BookOpen },
+  // {
+  //   href: "/dashboard?status=COMPLETED",
+  //   label: "Completed",
+  //   icon: CheckCircle,
+  // },
+  // {
+  //   href: "/dashboard?status=WANT_TO_READ",
+  //   label: "Want to Read",
+  //   icon: Heart,
+  // },
+  // { href: "/dashboard?status=ON_HOLD", label: "On Hold", icon: Pause },
 ];
 
 export default function DashboardLayout({
@@ -116,6 +116,10 @@ export default function DashboardLayout({
               src={"/android-chrome-512x512.png"}
               width={24}
               height={24}
+              style={{
+                width: "auto",
+                height: "auto",
+              }}
               alt="logo"
             />
             <span className="text-lg font-semibold tracking-tight font-(family-name:--font-dynapuff)">
@@ -210,20 +214,26 @@ export default function DashboardLayout({
       {/* Main content */}
       <div className="flex-1 flex flex-col h-screen overflow-auto min-w-0">
         {/* Mobile top bar */}
-        <header className="sticky top-0 z-30 flex items-center gap-3 px-4 h-14 bg-background/80 backdrop-blur-xl border-b border-border lg:hidden">
+        <header className="sticky top-0 z-30 flex items-center gap-3 px-4 h-14 bg-background/80 backdrop-blur-xl border-b border-border lg:hidden py-4">
           <button
             onClick={() => setSidebarOpen(true)}
-            className="w-9 h-9 rounded-xl flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent transition-colors active:scale-95"
+            className="w-9 h-9 rounded-xl lg:flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent transition-colors active:scale-95 hidden"
           >
             <Menu size={20} />
           </button>
-          <span className="text-base font-semibold font-(family-name:--font-dynapuff) tracking-tight">
+          <span className="text-lg flex gap-4 font-semibold font-(family-name:--font-dynapuff) tracking-tight">
+            <Image
+              src={"/android-chrome-512x512.png"}
+              width={24}
+              height={24}
+              alt="logo"
+            />
             NightOwl
           </span>
         </header>
 
         {/* Page content */}
-        <main className="flex-1  px-4 md:px-6 lg:px-8 py-6 lg:py-8">
+        <main className="flex-1  px-4 pb-12 md:px-6 lg:px-8 py-6 lg:py-8">
           {children}
         </main>
       </div>

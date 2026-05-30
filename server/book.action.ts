@@ -48,6 +48,11 @@ export async function getAllBooks() {
           },
         },
       },
+      orderBy: {
+        book: {
+          createdAt: "desc",
+        },
+      },
     });
 
     // normalise result
@@ -499,5 +504,38 @@ export async function createUpdateBookAction(data: BookFormData) {
     };
   } catch (error) {
     console.error(error);
+  }
+}
+
+export async function getAllAuthors() {
+  try {
+    return await prisma.author.findMany({
+      select: {
+        id: true,
+        name: true,
+        image: true,
+        bio: true,
+        hardcoverId: true,
+      },
+    });
+  } catch (error) {
+    console.error(error);
+    throw new Error("Failed to fetch authors");
+  }
+}
+
+export async function getAllSeries() {
+  try {
+    return await prisma.series.findMany({
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        hardcoverId: true,
+      },
+    });
+  } catch (error) {
+    console.error(error);
+    throw new Error("Failed to fetch authors");
   }
 }
