@@ -122,9 +122,10 @@ model UserBook {
   userId Int
   bookId Int
 
-  status    ReadingStatus
-  progress  Int? // current page
-  bookImage String?
+  status      ReadingStatus
+  progress    Int? // current page
+  bookImage   String?
+  bookImageId String?
 
   startedAt  DateTime?
   finishedAt DateTime?

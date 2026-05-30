@@ -11,6 +11,7 @@ export const books: IBook[] = [
     title: "Assassin's Apprentice",
     series: [
       {
+        id: 0,
         name: "The Farseer Trilogy",
         hardcoverId: NaN,
         description:
@@ -18,13 +19,7 @@ export const books: IBook[] = [
       },
     ],
     // seriesOrder: 1,
-    authors: [
-      {
-        name: "Robin Hobb",
-        image: "",
-        hardcoverId: NaN,
-      },
-    ],
+    authors: [{ id: 0, name: "Robin Hobb", image: "", hardcoverId: NaN }],
     indexInSeries: 0,
     mood: ["Fantasy", "Epic Fantasy"],
     hardcoverId: NaN,
@@ -57,13 +52,7 @@ export const books: IBook[] = [
     id: 2,
     title: "Project Hail Mary",
     series: null,
-    authors: [
-      {
-        name: "Andy Weir",
-        image: "",
-        hardcoverId: NaN,
-      },
-    ],
+    authors: [{ id: 0, name: "Andy Weir", image: "", hardcoverId: NaN }],
     indexInSeries: 0,
 
     hardcoverId: NaN,
@@ -93,13 +82,7 @@ export const books: IBook[] = [
     id: 3,
     title: "Piranesi",
     series: null,
-    authors: [
-      {
-        name: "Susanna Clarke",
-        image: "",
-        hardcoverId: NaN,
-      },
-    ],
+    authors: [{ id: 0, name: "Susanna Clarke", image: "", hardcoverId: NaN }],
     hardcoverId: NaN,
     averageRating: 4.3,
     mood: ["Fantasy", "Literary Fiction"],
@@ -127,15 +110,14 @@ export const books: IBook[] = [
     id: 4,
     title: "The Name of the Wind",
     series: [
-      { name: "The Kingkiller Chronicle", hardcoverId: NaN, description: "" },
-    ],
-    authors: [
       {
-        name: "Patrick Rothfuss",
-        image: "",
+        id: 0,
+        name: "The Kingkiller Chronicle",
         hardcoverId: NaN,
+        description: "",
       },
     ],
+    authors: [{ id: 0, name: "Patrick Rothfuss", image: "", hardcoverId: NaN }],
     hardcoverId: NaN,
     averageRating: 4.5,
     mood: ["Fantasy", "Epic Fantasy"],

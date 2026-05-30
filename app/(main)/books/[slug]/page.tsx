@@ -111,8 +111,8 @@ export default function BookDetailPage({
           slug,
         });
 
-  console.log("book", book);
-  
+  // console.log("book", book);
+
   const relatedBooks = !book
     ? []
     : books
@@ -353,7 +353,9 @@ export default function BookDetailPage({
             {/* Primary CTA */}
             <button
               className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-foreground text-background text-sm font-medium hover:bg-foreground/90 transition-all duration-200 active:scale-95"
-              onClick={mode === "store" ? performAction : () => setEditDialogOpen(true)}
+              onClick={
+                mode === "store" ? performAction : () => setEditDialogOpen(true)
+              }
             >
               {mode === "store" ? "Add to Library" : "Update Details"}
               <ArrowUpRight size={14} />
@@ -576,6 +578,9 @@ export default function BookDetailPage({
         book={book}
         open={editDialogOpen}
         onOpenChange={setEditDialogOpen}
+        onSubmit={(data) => {
+          console.log(data);
+        }}
       />
     </div>
   );

@@ -1,5 +1,6 @@
 "use server";
 
+import { BookFormData } from "@/components/book-form-dialog/types";
 import {
   GET_AUTHOR_DETAILS,
   GET_BOOKS_BY_IDS,
@@ -30,6 +31,7 @@ export async function getAllBooks() {
           include: {
             series: {
               select: {
+                id: true,
                 name: true,
                 hardcoverId: true,
                 description: true,
@@ -37,6 +39,7 @@ export async function getAllBooks() {
             },
             authors: {
               select: {
+                id: true,
                 name: true,
                 image: true,
                 hardcoverId: true,
@@ -51,6 +54,7 @@ export async function getAllBooks() {
     const normalised: IBook[] = result.map((ub) => {
       return {
         ...ub.book,
+        ...(ub.bookImage ? { coverImage: ub.bookImage } : {}),
         addedAt: ub.createdAt,
         progress: ub.progress,
         status: ub.status,
@@ -323,6 +327,7 @@ export async function addBookToLibraryAction(hardCoverBookIds: number[]) {
             include: {
               series: {
                 select: {
+                  id: true,
                   name: true,
                   hardcoverId: true,
                   description: true,
@@ -330,6 +335,7 @@ export async function addBookToLibraryAction(hardCoverBookIds: number[]) {
               },
               authors: {
                 select: {
+                  id: true,
                   name: true,
                   image: true,
                   hardcoverId: true,
@@ -388,4 +394,110 @@ export async function getBookBySlugAction(slug: string) {
       status: ReadingStatus.WANT_TO_READ,
     } as IBook;
   } catch (error) {}
+}
+
+export async function createUpdateBookAction(data: BookFormData) {
+  const {
+    fileId,
+    coverImage,
+    coverFile,
+    id,
+    status,
+    authors,
+    series,
+    ...bookData
+  } = data;
+
+  const user = await currentUser();
+  if (!user) {
+    throw new Error("User Not authenticated");
+  }
+
+  try {
+    const [book, userBook] = await prisma.$transaction(
+      [
+        prisma.book.update({
+          where: {
+            id: data.id,
+          },
+          data: {
+            ...bookData,
+            releaseDate: new Date(bookData.releaseDate),
+            authors: {
+              set: [],
+              connectOrCreate: authors.map((a) => ({
+                where: {
+                  id: a.id,
+                },
+                create: {
+                  name: a.name,
+                  hardcoverId: a.hardcoverId ?? null,
+                  bio: null,
+                  image: a.image ?? null,
+                },
+              })),
+            },
+            series: {
+              set: [],
+              connectOrCreate: series.map((s) => ({
+                where: {
+                  id: s.id,
+                },
+                create: {
+                  name: s.name,
+                  description: s.description,
+                  hardcoverId: s.hardcoverId,
+                },
+              })),
+            },
+          },
+          include: {
+            series: {
+              select: {
+                id: true,
+                name: true,
+                hardcoverId: true,
+                description: true,
+              },
+            },
+            authors: {
+              select: {
+                id: true,
+                name: true,
+                image: true,
+                hardcoverId: true,
+              },
+            },
+          },
+        }),
+        prisma.userBook.update({
+          where: {
+            userId_bookId: {
+              userId: Number(user.externalId),
+              bookId: id,
+            },
+          },
+          data: {
+            bookImageId: fileId,
+            bookImage: coverImage,
+            status: status,
+          },
+        }),
+      ],
+      {
+        timeout: 10000,
+      },
+    );
+    console.log(userBook);
+
+    return {
+      ...book,
+      ...(userBook.bookImage ? { coverImage: userBook.bookImage } : {}),
+      addedAt: userBook.createdAt,
+      progress: userBook.progress,
+      status: userBook.status,
+    };
+  } catch (error) {
+    console.error(error);
+  }
 }

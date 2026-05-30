@@ -37,13 +37,16 @@ interface BookFormDialogProps {
 /** Convert an IBook to pre-populated form data */
 function bookToFormData(book: IBook): Partial<BookFormData> {
   return {
+    id: book.id ?? -1,
     title: book.title,
     authors: (book.authors ?? []).map((a) => ({
+      id: a.id,
       name: a.name,
       image: a.image,
       hardcoverId: a.hardcoverId,
     })) as AuthorOption[],
     series: (book.series ?? []).map((s) => ({
+      id: s.id,
       name: s.name,
       hardcoverId: s.hardcoverId,
       description: s.description,
@@ -108,53 +111,57 @@ export default function BookFormDialog({
               "p-0",
               "shadow-[0_25px_60px_-12px_rgba(0,0,0,0.3),0_0_0_1px_rgba(0,0,0,0.05)]",
               "dark:shadow-[0_25px_60px_-12px_rgba(0,0,0,0.6),0_0_80px_rgba(200,160,80,0.03)]",
-              "overflow-y-auto",
+              "overflow-hidden",
             )}
             // showCloseButton={false}
             forceMount
->
-              <motion.div
-                className="flex flex-col overflow-hidden"
-                initial={{ opacity: 0, scale: 0.96, y: 8 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.98, y: 4 }}
-                transition={{
-                  duration: 0.3,
-                  ease: [0.23, 1, 0.32, 1],
-                }}
+          >
+            <motion.div
+              className="flex flex-col overflow-hidden"
+              initial={{ opacity: 0, scale: 0.96, y: 8 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.98, y: 4 }}
+              transition={{
+                duration: 0.3,
+                ease: [0.23, 1, 0.32, 1],
+              }}
+            >
+              {/* ── Header ── */}
+              <div
+                className={cn(
+                  "flex items-center justify-between",
+                  "px-5 sm:px-7 py-4",
+                  "border-b border-border",
+                  "shrink-0",
+                )}
               >
-                {/* ── Header ── */}
-                <div
-                  className={cn(
-                    "flex items-center justify-between",
-                    "px-5 sm:px-7 py-4",
-                    "border-b border-border",
-                    "shrink-0",
-                  )}
-                >
-                  <div>
-                    <DialogTitle className="text-lg font-semibold tracking-tight font-(family-name:--font-display)">
-                      {mode === "create" ? "Add a New Book" : "Edit Book Details"}
-                    </DialogTitle>
-                    <DialogDescription className="text-xs text-muted-foreground/60 mt-0.5">
-                      {mode === "create"
-                        ? "Fill in the details to add a book to your library"
-                        : "Update the information for this book"}
-                    </DialogDescription>
-                  </div>
+                <div>
+                  <DialogTitle className="text-lg font-semibold tracking-tight font-(family-name:--font-display)">
+                    {mode === "create" ? "Add a New Book" : "Edit Book Details"}
+                  </DialogTitle>
+                  <DialogDescription className="text-xs text-muted-foreground/60 mt-0.5">
+                    {mode === "create"
+                      ? "Fill in the details to add a book to your library"
+                      : "Update the information for this book"}
+                  </DialogDescription>
                 </div>
+              </div>
 
-                {/* ── Form (scrollable + sticky footer) ── */}
-                <BookForm
-                  mode={mode}
-                  initialData={initialData}
-                  onSubmit={handleSubmit}
-                  onCancel={handleCancel}
-                />
-              </motion.div>
-            </DialogContent>
-          )}
-        </AnimatePresence>
-      </Dialog>
+              {/* ── Form (scrollable + sticky footer) ── */}
+              <BookForm
+                mode={mode}
+                initialData={initialData}
+                existingBookId={book?.id}
+                existingUserBookId={
+                  book ? ((book as any).userBookId ?? undefined) : undefined
+                }
+                onSubmit={handleSubmit}
+                onCancel={handleCancel}
+              />
+            </motion.div>
+          </DialogContent>
+        )}
+      </AnimatePresence>
+    </Dialog>
   );
 }

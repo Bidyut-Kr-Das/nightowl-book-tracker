@@ -6,26 +6,31 @@ import { ReadingStatus } from "@/lib/generated/prisma/enums";
 
 /** Author option for the multi-select pill selector */
 export type AuthorOption = {
+  id: number;
   name: string;
-  image?: string | null;
-  hardcoverId?: number | null;
+  image: string | null;
+  hardcoverId: number | null;
 };
 
 /** Series option for the multi-select pill selector */
 export type SeriesOption = {
+  id: number;
   name: string;
-  hardcoverId?: number | null;
-  description?: string | null;
+  hardcoverId: number | null;
+  description: string | null;
 };
 
 /** Complete form data shape — mirrors Book model minus system fields */
 export interface BookFormData {
+  id: number;
   // ── Section 1: Core Information ──
   title: string;
   authors: AuthorOption[];
   series: SeriesOption[];
   coverImage: string | null;
   coverFile: File | null;
+  fileId: string | null;
+
   status: ReadingStatus;
 
   // ── Section 2: Additional Information ──
@@ -94,11 +99,13 @@ export const readingStatusColors: Record<
 
 /** Default empty form data for create mode */
 export const emptyFormData: BookFormData = {
+  id: -1,
   title: "",
   authors: [],
   series: [],
   coverImage: null,
   coverFile: null,
+  fileId: null,
   status: ReadingStatus.WANT_TO_READ,
   subtitle: "",
   slug: "",

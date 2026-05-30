@@ -1,8 +1,11 @@
+import { BookFormData } from "@/components/book-form-dialog/types";
 import { books as dummyBooks } from "@/lib/books-data";
 import { Author, Series } from "@/lib/generated/prisma/client";
 import { ReadingStatus } from "@/lib/generated/prisma/enums";
 import {
   addBookToLibraryAction,
+  createUpdateBookAction,
+  // createUpdateBookAction,
   getAllBooks,
   getBookBySlugAction,
   searchBookStore,
@@ -53,6 +56,8 @@ type BookActions = {
   getSharedBook: (slug: string) => Promise<void>;
 
   getAllLibraryBooks: () => Promise<void>;
+
+  createOrUpdateBook: (data: BookFormData) => Promise<void>;
 };
 
 type BookStore = BookState & BookActions;
@@ -157,6 +162,31 @@ export const useBookStore = create<BookStore>((set) => ({
       sharedBook: res ?? null,
       loading: false,
     });
+  },
+
+  createOrUpdateBook: async (data) => {
+    set({ loading: true, error: null });
+    console.log(data);
+    try {
+      const result = await createUpdateBookAction(data);
+      if (!result) {
+        set({ loading: false, error: "Failed to save book" });
+        // return null;
+        return;
+      }
+      set((state) => ({
+        books: result.id
+          ? state.books.map((b) => (b.id === result.id ? result : b))
+          : [result, ...state.books],
+        loading: false,
+      }));
+      // return result;
+      // return null;
+    } catch (error) {
+      console.error("Failed to create/update book:", error);
+      set({ error: "Failed to save book", loading: false });
+      return;
+    }
   },
 
   getBooksByStatus: (status: ReadingStatus) => {},

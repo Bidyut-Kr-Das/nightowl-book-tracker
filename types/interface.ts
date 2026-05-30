@@ -7,8 +7,8 @@ import {
 } from "@/lib/generated/prisma/client";
 
 export interface IBook extends Book, Pick<UserBook, "progress" | "status"> {
-  authors: Pick<Author, "name" | "image" | "hardcoverId">[];
-  series: Pick<Series, "name" | "hardcoverId" | "description">[] | null;
+  authors: Pick<Author, "id" | "name" | "image" | "hardcoverId">[];
+  series: Pick<Series, "id" | "name" | "hardcoverId" | "description">[] | null;
   addedAt: Date;
 }
 
@@ -51,10 +51,10 @@ export type HardcoverBook = {
     author: {
       id: number;
       name: string;
-      image:{
-        url:string
+      image: {
+        url: string;
       };
-      bio:string
+      bio: string;
     };
   }[];
 

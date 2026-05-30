@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import React, { useState, useCallback } from "react";
 import { cn } from "@/lib/utils";
 import { ReadingStatus } from "@/lib/generated/prisma/enums";
 import { useBookStore } from "@/store/book.store";
 import { format } from "date-fns";
+import { upload } from "@imagekit/next";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -39,10 +40,14 @@ import {
 import CoverImageUpload from "./cover-image-upload";
 import TagInput from "./tag-input";
 import MultiSelectPills from "./multi-select-pills";
+import { getImageKitAuth } from "@/server/image.action";
+import { toast } from "sonner";
 
 interface BookFormProps {
   mode: "create" | "edit";
   initialData?: Partial<BookFormData>;
+  existingBookId?: number;
+  existingUserBookId?: number;
   onSubmit: (data: BookFormData) => void;
   onCancel: () => void;
 }
@@ -50,9 +55,14 @@ interface BookFormProps {
 export default function BookForm({
   mode,
   initialData,
+  existingBookId,
+  existingUserBookId,
   onSubmit,
   onCancel,
 }: BookFormProps) {
+  const createOrUpdateBook = useBookStore((s) => s.createOrUpdateBook);
+  const [submitting, setSubmitting] = useState(false);
+
   const [formData, setFormData] = useState<BookFormData>(() => ({
     ...emptyFormData,
     ...initialData,
@@ -81,7 +91,7 @@ export default function BookForm({
   }, []);
 
   const handleSubmit = useCallback(
-    (e: React.FormEvent) => {
+    async (e: any) => {
       e.preventDefault();
       const validationErrors = validateForm(formData);
       if (Object.keys(validationErrors).length > 0) {
@@ -93,9 +103,44 @@ export default function BookForm({
         });
         return;
       }
-      onSubmit(formData);
+      setSubmitting(true);
+      try {
+        if (formData.coverFile) {
+          const res = await getImageKitAuth();
+          if (!res) {
+            toast.error("Authentication Failed for imagekit");
+            return;
+          }
+          const { expire, publicKey, signature, token } = res;
+          const { fileId, url } = await upload({
+            file: formData.coverFile,
+            expire,
+            fileName: formData.slug + "-cover",
+            publicKey,
+            signature,
+            token,
+          });
+          // console.log(fileId, url);
+          if (url && fileId) {
+            formData.coverImage = url;
+            formData.fileId = fileId;
+            formData.coverFile = null;
+          }
+        }
+        console.log(formData);
+        await createOrUpdateBook(formData);
+        // onSubmit(formData);
+      } finally {
+        setSubmitting(false);
+      }
     },
-    [formData, onSubmit],
+    [
+      formData,
+      onSubmit,
+      createOrUpdateBook,
+      existingBookId,
+      existingUserBookId,
+    ],
   );
 
   const fieldError = (key: keyof BookFormData) =>
@@ -104,9 +149,13 @@ export default function BookForm({
   return (
     <form
       onSubmit={handleSubmit}
-      className="flex flex-col h-full overflow-hidden"
+      className="flex flex-col h-120 overflow-y-auto "
     >
-      <Tabs defaultValue="basic" orientation="horizontal" className="flex-1 flex flex-col overflow-hidden">
+      <Tabs
+        defaultValue="basic"
+        orientation="horizontal"
+        className="flex-1 flex flex-col overflow-hidden"
+      >
         <div className="px-5 sm:px-7 pt-4 pb-0 border-b border-border shrink-0">
           <TabsList variant="line" className="gap-6 bg-transparent p-0">
             <TabsTrigger
@@ -164,7 +213,9 @@ export default function BookForm({
                     label="Author"
                     options={storeAuthors}
                     selected={formData.authors}
-                    onChange={(val) => updateField("authors", val as AuthorOption[])}
+                    onChange={(val) =>
+                      updateField("authors", val as AuthorOption[])
+                    }
                     getDisplayValue={(a) => a.name}
                     getKey={(a) => a.hardcoverId?.toString() ?? a.name}
                     placeholder="Search authors…"
@@ -177,7 +228,9 @@ export default function BookForm({
                     label="Series"
                     options={storeSeries}
                     selected={formData.series}
-                    onChange={(val) => updateField("series", val as SeriesOption[])}
+                    onChange={(val) =>
+                      updateField("series", val as SeriesOption[])
+                    }
                     getDisplayValue={(s) => s.name}
                     getKey={(s) => s.hardcoverId?.toString() ?? s.name}
                     placeholder="Search series…"
@@ -195,9 +248,13 @@ export default function BookForm({
                     <SelectTrigger id="book-status" className="w-full">
                       <SelectValue placeholder="Select status" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="px-2 py-1 ">
                       {Object.values(ReadingStatus).map((status) => (
-                        <SelectItem key={status} value={status}>
+                        <SelectItem
+                          key={status}
+                          value={status}
+                          className="rounded-sm"
+                        >
                           <span className="flex items-center gap-2">
                             <span
                               className="w-2 h-2 rounded-full shrink-0"
@@ -216,7 +273,7 @@ export default function BookForm({
             </div>
           </TabsContent>
 
-          <TabsContent value="advanced" className="mt-0">
+          <TabsContent value="advanced" className="mt-0 overflow-auto">
             <div className="space-y-5">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <FieldWrapper label="Subtitle" htmlFor="book-subtitle">
@@ -343,7 +400,10 @@ export default function BookForm({
                   />
                 </FieldWrapper>
 
-                <FieldWrapper label="Ratings Count" htmlFor="book-ratings-count">
+                <FieldWrapper
+                  label="Ratings Count"
+                  htmlFor="book-ratings-count"
+                >
                   <Input
                     id="book-ratings-count"
                     type="number"
@@ -360,7 +420,10 @@ export default function BookForm({
                   />
                 </FieldWrapper>
 
-                <FieldWrapper label="Reviews Count" htmlFor="book-reviews-count">
+                <FieldWrapper
+                  label="Reviews Count"
+                  htmlFor="book-reviews-count"
+                >
                   <Input
                     id="book-reviews-count"
                     type="number"
@@ -425,8 +488,12 @@ export default function BookForm({
         <Button variant="outline" type="button" onClick={onCancel}>
           Cancel
         </Button>
-        <Button type="submit">
-          {mode === "create" ? "Create Book" : "Save Changes"}
+        <Button type="submit" disabled={submitting}>
+          {submitting
+            ? "Saving…"
+            : mode === "create"
+              ? "Create Book"
+              : "Save Changes"}
         </Button>
       </div>
     </form>
