@@ -42,7 +42,7 @@ export interface BookFormData {
   reviewsCount: number;
   indexInSeries: number;
   tags: string[];
-  hardcoverId: number | null;
+  // hardcoverId: number | null;
 }
 
 /** Human-readable labels for ReadingStatus enum */
@@ -113,7 +113,7 @@ export const emptyFormData: BookFormData = {
   reviewsCount: 0,
   indexInSeries: 0,
   tags: [],
-  hardcoverId: null,
+  // hardcoverId: null,
 };
 
 /** Validation errors shape — only includes fields that can fail */

@@ -114,8 +114,8 @@ export default function MultiSelectPills<T>({
         <button
           type="button"
           className={cn(
-            "flex flex-wrap items-center gap-1.5 w-full px-3 py-2 min-h-[42px] text-left",
-            "rounded-[var(--radius-md)] border border-border",
+            "flex flex-wrap items-center gap-1.5 w-full px-3 py-2 min-h-10.5 text-left",
+            "rounded-md border border-border",
             "bg-input/50 transition-all duration-200",
             "hover:border-border/80",
             open && "border-ring ring-1 ring-ring/30",
@@ -138,8 +138,8 @@ export default function MultiSelectPills<T>({
                 )}
               >
                 {getDisplayValue(item)}
-                <button
-                  type="button"
+                <span
+                  // type="button"
                   onClick={(e) => {
                     e.stopPropagation();
                     removeItem(key);
@@ -148,7 +148,7 @@ export default function MultiSelectPills<T>({
                   aria-label={`Remove ${getDisplayValue(item)}`}
                 >
                   <X size={10} />
-                </button>
+                </span>
               </span>
             );
           })}
@@ -165,8 +165,8 @@ export default function MultiSelectPills<T>({
           align="start"
           sideOffset={6}
           className={cn(
-            "z-[100] w-[var(--radix-popover-trigger-width)] max-h-[260px]",
-            "rounded-[var(--radius-lg)] border border-border",
+            "z-100 w-(--radix-popover-trigger-width) max-h-65",
+            "rounded-lg border border-border",
             "bg-popover text-popover-foreground",
             "shadow-lg shadow-black/8 dark:shadow-black/30",
             "animate-in fade-in-0 zoom-in-[0.97] duration-200",
@@ -194,7 +194,7 @@ export default function MultiSelectPills<T>({
           {/* Options list */}
           <div
             ref={listRef}
-            className="overflow-y-auto max-h-[200px] py-1 scroll-smooth"
+            className="overflow-y-auto max-h-50 py-1 scroll-smooth"
           >
             {filtered.length === 0 ? (
               <p className="px-3 py-4 text-center text-xs text-muted-foreground/50">

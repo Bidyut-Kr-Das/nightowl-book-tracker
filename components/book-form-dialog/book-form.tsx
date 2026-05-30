@@ -1,11 +1,28 @@
 "use client";
 
-import { useState, useCallback, useMemo } from "react";
-import { Select } from "radix-ui";
-import { Check, ChevronDown } from "lucide-react";
+import { useState, useCallback } from "react";
 import { cn } from "@/lib/utils";
 import { ReadingStatus } from "@/lib/generated/prisma/enums";
 import { useBookStore } from "@/store/book.store";
+import { format } from "date-fns";
+
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
 import type {
   BookFormData,
@@ -20,15 +37,8 @@ import {
   validateForm,
 } from "./types";
 import CoverImageUpload from "./cover-image-upload";
-import MultiSelectPills from "./multi-select-pills";
 import TagInput from "./tag-input";
-
-/* ═══════════════════════════════════════════════
-   BookForm — Two-section form layout
-   ─────────────────────────────────────────────
-   Section 1: Core Information (cover + key fields)
-   Section 2: Additional Information (metadata)
-   ═══════════════════════════════════════════════ */
+import MultiSelectPills from "./multi-select-pills";
 
 interface BookFormProps {
   mode: "create" | "edit";
@@ -50,14 +60,11 @@ export default function BookForm({
   const [errors, setErrors] = useState<FormErrors>({});
   const [touched, setTouched] = useState<Set<string>>(new Set());
 
-  // Available options from the store
   const { authors: storeAuthors, series: storeSeries } = useBookStore();
 
-  // Update a single field
   const updateField = useCallback(
     <K extends keyof BookFormData>(key: K, value: BookFormData[K]) => {
       setFormData((prev) => ({ ...prev, [key]: value }));
-      // Clear error when field is edited
       if (errors[key]) {
         setErrors((prev) => {
           const next = { ...prev };
@@ -69,19 +76,16 @@ export default function BookForm({
     [errors],
   );
 
-  // Mark field as touched on blur
   const handleBlur = useCallback((field: string) => {
     setTouched((prev) => new Set(prev).add(field));
   }, []);
 
-  // Submit handler
   const handleSubmit = useCallback(
     (e: React.FormEvent) => {
       e.preventDefault();
       const validationErrors = validateForm(formData);
       if (Object.keys(validationErrors).length > 0) {
         setErrors(validationErrors);
-        // Mark all errored fields as touched
         setTouched((prev) => {
           const next = new Set(prev);
           Object.keys(validationErrors).forEach((k) => next.add(k));
@@ -94,302 +98,321 @@ export default function BookForm({
     [formData, onSubmit],
   );
 
-  // Helper: show error only if field was touched
   const fieldError = (key: keyof BookFormData) =>
     touched.has(key) ? errors[key] : undefined;
 
   return (
     <form
       onSubmit={handleSubmit}
-      className="flex flex-col h-full overflow-y-auto"
+      className="flex flex-col h-full overflow-hidden"
     >
-      {/* ── Scrollable content ── */}
-      <div className="flex-1 overflow-scroll px-5 sm:px-7 py-6 space-y-8">
-        {/* ═══════════════════════════════
-           SECTION 1: Core Information
-           ═══════════════════════════════ */}
-        <section>
-          <div className="mb-5">
-            <h3 className="text-sm font-semibold text-foreground uppercase tracking-wider">
-              Core Information
-            </h3>
-            <p className="text-xs text-muted-foreground/60 mt-1">
-              The essentials — title, authors, and cover image
-            </p>
-          </div>
-
-          {/* Desktop: cover left, fields right. Mobile: stacked */}
-          <div className="flex flex-col md:flex-row gap-6 md:gap-8">
-            {/* Cover image — featured element */}
-            <div className="shrink-0 flex flex-col items-center md:items-start">
-              <CoverImageUpload
-                imageUrl={formData.coverImage}
-                onImageChange={(file, previewUrl) => {
-                  updateField("coverFile", file);
-                  updateField("coverImage", previewUrl);
-                }}
-              />
-            </div>
-
-            {/* Core fields */}
-            <div className="flex-1 min-w-0 space-y-5">
-              {/* Book Name — large, prominent */}
-              <FieldWrapper
-                label="Book Title"
-                required
-                error={fieldError("title")}
-                htmlFor="book-title"
-              >
-                <input
-                  id="book-title"
-                  type="text"
-                  value={formData.title}
-                  onChange={(e) => updateField("title", e.target.value)}
-                  onBlur={() => handleBlur("title")}
-                  placeholder="Enter book title…"
-                  className={cn(
-                    "w-full px-3.5 py-2.5 text-base font-medium",
-                    "font-(family-name:--font-display)",
-                    "rounded-[var(--radius-md)] border",
-                    "bg-input/50 transition-all duration-200",
-                    "placeholder:text-muted-foreground/30",
-                    "focus:outline-none focus:border-ring focus:ring-1 focus:ring-ring/30",
-                    fieldError("title")
-                      ? "border-destructive"
-                      : "border-border",
-                  )}
-                />
-              </FieldWrapper>
-
-              {/* Authors — multi-select pills */}
-              <FieldWrapper label="Authors" htmlFor="book-authors">
-                <MultiSelectPills<AuthorOption>
-                  label="Authors"
-                  options={storeAuthors as AuthorOption[]}
-                  selected={formData.authors}
-                  onChange={(val) => updateField("authors", val)}
-                  getDisplayValue={(a) => a.name}
-                  getKey={(a) => a.hardcoverId?.toString() ?? a.name}
-                  placeholder="Search authors…"
-                  emptyMessage="No matching authors"
-                />
-              </FieldWrapper>
-
-              {/* Series — multi-select pills */}
-              <FieldWrapper label="Series" htmlFor="book-series">
-                <MultiSelectPills<SeriesOption>
-                  label="Series"
-                  options={storeSeries as SeriesOption[]}
-                  selected={formData.series}
-                  onChange={(val) => updateField("series", val)}
-                  getDisplayValue={(s) => s.name}
-                  getKey={(s) => s.hardcoverId?.toString() ?? s.name}
-                  placeholder="Search series…"
-                  emptyMessage="No matching series"
-                />
-              </FieldWrapper>
-
-              {/* Status — select */}
-              <FieldWrapper label="Status" htmlFor="book-status">
-                <StatusSelect
-                  value={formData.status}
-                  onChange={(val) => updateField("status", val)}
-                />
-              </FieldWrapper>
-            </div>
-          </div>
-        </section>
-
-        {/* ── Section separator ── */}
-        <div className="relative">
-          <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-border" />
-          </div>
-          <div className="relative flex justify-center">
-            <span className="bg-popover px-3 text-xs text-muted-foreground/50 uppercase tracking-widest">
-              Additional Details
-            </span>
-          </div>
+      <Tabs defaultValue="basic" orientation="horizontal" className="flex-1 flex flex-col overflow-hidden">
+        <div className="px-5 sm:px-7 pt-4 pb-0 border-b border-border shrink-0">
+          <TabsList variant="line" className="gap-6 bg-transparent p-0">
+            <TabsTrigger
+              value="basic"
+              // className="data-active:border-b-2 data-active:border-foreground data-active:text-foreground rounded-none px-1 pb-3 data-active:shadow-none text-muted-foreground hover:text-foreground data-active:font-semibold"
+            >
+              Basic Info
+            </TabsTrigger>
+            <TabsTrigger
+              value="advanced"
+              // className="data-active:border-b-2 data-active:border-foreground data-active:text-foreground rounded-none px-1 pb-3 data-active:shadow-none text-muted-foreground hover:text-foreground data-active:font-semibold"
+            >
+              Advanced
+            </TabsTrigger>
+          </TabsList>
         </div>
 
-        {/* ═══════════════════════════════
-           SECTION 2: Additional Information
-           ═══════════════════════════════ */}
-        <section className="space-y-5">
-          {/* Subtitle + Slug — 2 column */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-            <FieldWrapper label="Subtitle" htmlFor="book-subtitle">
-              <TextInput
-                id="book-subtitle"
-                value={formData.subtitle}
-                onChange={(val) => updateField("subtitle", val)}
-                placeholder="Book subtitle…"
-              />
-            </FieldWrapper>
+        <div className="flex-1 overflow-y-auto px-5 sm:px-7 py-6">
+          <TabsContent value="basic" className="mt-0">
+            <div className="flex flex-col md:flex-row gap-6 md:gap-8">
+              <div className="shrink-0 flex flex-col items-center md:items-start">
+                <CoverImageUpload
+                  imageUrl={formData.coverImage}
+                  onImageChange={(file, previewUrl) => {
+                    updateField("coverFile", file);
+                    updateField("coverImage", previewUrl);
+                  }}
+                />
+              </div>
 
-            <FieldWrapper label="Slug" htmlFor="book-slug">
-              <TextInput
-                id="book-slug"
-                value={formData.slug}
-                onChange={(val) => updateField("slug", val)}
-                placeholder="book-url-slug"
-              />
-            </FieldWrapper>
-          </div>
+              <div className="flex-1 min-w-0 space-y-5">
+                <FieldWrapper
+                  label="Book Title"
+                  required
+                  error={fieldError("title")}
+                  htmlFor="book-title"
+                >
+                  <Input
+                    id="book-title"
+                    type="text"
+                    value={formData.title}
+                    onChange={(e) => updateField("title", e.target.value)}
+                    onBlur={() => handleBlur("title")}
+                    placeholder="Enter book title…"
+                    className={cn(
+                      "w-full px-3.5 py-2.5 text-base font-medium font-(family-name:--font-display)",
+                      fieldError("title") &&
+                        "border-destructive focus-visible:ring-destructive/30",
+                    )}
+                  />
+                </FieldWrapper>
 
-          {/* Description — full width textarea */}
-          <FieldWrapper label="Description" htmlFor="book-description">
-            <textarea
-              id="book-description"
-              value={formData.description}
-              onChange={(e) => updateField("description", e.target.value)}
-              placeholder="Tell readers about this book…"
-              rows={5}
-              className={cn(
-                "w-full px-3.5 py-2.5 text-sm leading-relaxed",
-                "rounded-[var(--radius-md)] border border-border",
-                "bg-input/50 resize-y min-h-[120px]",
-                "transition-all duration-200",
-                "placeholder:text-muted-foreground/30",
-                "focus:outline-none focus:border-ring focus:ring-1 focus:ring-ring/30",
-              )}
-            />
-          </FieldWrapper>
+                <FieldWrapper label="Authors" htmlFor="book-authors">
+                  <MultiSelectPills
+                    label="Author"
+                    options={storeAuthors}
+                    selected={formData.authors}
+                    onChange={(val) => updateField("authors", val as AuthorOption[])}
+                    getDisplayValue={(a) => a.name}
+                    getKey={(a) => a.hardcoverId?.toString() ?? a.name}
+                    placeholder="Search authors…"
+                    emptyMessage="No matching authors"
+                  />
+                </FieldWrapper>
 
-          {/* Headline */}
-          <FieldWrapper label="Headline" htmlFor="book-headline">
-            <TextInput
-              id="book-headline"
-              value={formData.headline}
-              onChange={(val) => updateField("headline", val)}
-              placeholder="A short tagline…"
-            />
-          </FieldWrapper>
+                <FieldWrapper label="Series" htmlFor="book-series">
+                  <MultiSelectPills
+                    label="Series"
+                    options={storeSeries}
+                    selected={formData.series}
+                    onChange={(val) => updateField("series", val as SeriesOption[])}
+                    getDisplayValue={(s) => s.name}
+                    getKey={(s) => s.hardcoverId?.toString() ?? s.name}
+                    placeholder="Search series…"
+                    emptyMessage="No matching series"
+                  />
+                </FieldWrapper>
 
-          {/* Genres — tag input */}
-          <FieldWrapper label="Genres" htmlFor="book-genres">
-            <TagInput
-              id="book-genres"
-              value={formData.genres}
-              onChange={(val) => updateField("genres", val)}
-              placeholder="Add genres…"
-            />
-          </FieldWrapper>
+                <FieldWrapper label="Status" htmlFor="book-status">
+                  <Select
+                    value={formData.status}
+                    onValueChange={(val) =>
+                      updateField("status", val as ReadingStatus)
+                    }
+                  >
+                    <SelectTrigger id="book-status" className="w-full">
+                      <SelectValue placeholder="Select status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.values(ReadingStatus).map((status) => (
+                        <SelectItem key={status} value={status}>
+                          <span className="flex items-center gap-2">
+                            <span
+                              className="w-2 h-2 rounded-full shrink-0"
+                              style={{
+                                background: readingStatusColors[status].dot,
+                              }}
+                            />
+                            {readingStatusLabels[status]}
+                          </span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </FieldWrapper>
+              </div>
+            </div>
+          </TabsContent>
 
-          {/* Release Date + Pages — 2 column */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-            <FieldWrapper label="Release Date" htmlFor="book-release-date">
-              <input
-                id="book-release-date"
-                type="date"
-                value={formData.releaseDate}
-                onChange={(e) => updateField("releaseDate", e.target.value)}
-                className={cn(
-                  "w-full px-3.5 py-2 text-sm",
-                  "rounded-[var(--radius-md)] border border-border",
-                  "bg-input/50 transition-all duration-200",
-                  "focus:outline-none focus:border-ring focus:ring-1 focus:ring-ring/30",
-                  // Style the empty date input placeholder
-                  !formData.releaseDate && "text-muted-foreground/40",
-                )}
-              />
-            </FieldWrapper>
+          <TabsContent value="advanced" className="mt-0">
+            <div className="space-y-5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                <FieldWrapper label="Subtitle" htmlFor="book-subtitle">
+                  <Input
+                    id="book-subtitle"
+                    value={formData.subtitle}
+                    onChange={(e) => updateField("subtitle", e.target.value)}
+                    placeholder="Book subtitle…"
+                  />
+                </FieldWrapper>
 
-            <FieldWrapper label="Pages" htmlFor="book-pages">
-              <NumberInput
-                id="book-pages"
-                value={formData.pages}
-                onChange={(val) => updateField("pages", val)}
-                placeholder="Page count"
-                min={0}
-              />
-            </FieldWrapper>
-          </div>
+                <FieldWrapper label="Slug" htmlFor="book-slug">
+                  <Input
+                    id="book-slug"
+                    value={formData.slug}
+                    onChange={(e) => updateField("slug", e.target.value)}
+                    placeholder="book-url-slug"
+                  />
+                </FieldWrapper>
+              </div>
 
-          {/* Mood — tag input */}
-          <FieldWrapper label="Mood" htmlFor="book-mood">
-            <TagInput
-              id="book-mood"
-              value={formData.mood}
-              onChange={(val) => updateField("mood", val)}
-              placeholder="Add mood tags…"
-            />
-          </FieldWrapper>
+              <FieldWrapper label="Description" htmlFor="book-description">
+                <Textarea
+                  id="book-description"
+                  value={formData.description}
+                  onChange={(e) => updateField("description", e.target.value)}
+                  placeholder="Tell readers about this book…"
+                  rows={5}
+                  className="min-h-30 resize-y"
+                />
+              </FieldWrapper>
 
-          {/* Rating + Counts — 3 column */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-            <FieldWrapper label="Average Rating" htmlFor="book-rating">
-              <NumberInput
-                id="book-rating"
-                value={formData.averageRating}
-                onChange={(val) => updateField("averageRating", val)}
-                placeholder="0.0"
-                min={0}
-                max={5}
-                step={0.1}
-              />
-            </FieldWrapper>
+              <FieldWrapper label="Headline" htmlFor="book-headline">
+                <Input
+                  id="book-headline"
+                  value={formData.headline}
+                  onChange={(e) => updateField("headline", e.target.value)}
+                  placeholder="A short tagline…"
+                />
+              </FieldWrapper>
 
-            <FieldWrapper label="Ratings Count" htmlFor="book-ratings-count">
-              <NumberInput
-                id="book-ratings-count"
-                value={formData.ratingsCount}
-                onChange={(val) => updateField("ratingsCount", val ?? 0)}
-                placeholder="0"
-                min={0}
-              />
-            </FieldWrapper>
+              <FieldWrapper label="Genres" htmlFor="book-genres">
+                <TagInput
+                  id="book-genres"
+                  value={formData.genres}
+                  onChange={(val) => updateField("genres", val)}
+                  placeholder="Add genres…"
+                />
+              </FieldWrapper>
 
-            <FieldWrapper label="Reviews Count" htmlFor="book-reviews-count">
-              <NumberInput
-                id="book-reviews-count"
-                value={formData.reviewsCount}
-                onChange={(val) => updateField("reviewsCount", val ?? 0)}
-                placeholder="0"
-                min={0}
-              />
-            </FieldWrapper>
-          </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                <FieldWrapper label="Release Date" htmlFor="book-release-date">
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className="w-full justify-start text-left font-normal"
+                      >
+                        {formData.releaseDate
+                          ? format(new Date(formData.releaseDate), "PPP")
+                          : "Pick a date"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={
+                          formData.releaseDate
+                            ? new Date(formData.releaseDate)
+                            : undefined
+                        }
+                        onSelect={(date) =>
+                          updateField(
+                            "releaseDate",
+                            date ? date.toISOString().split("T")[0] : "",
+                          )
+                        }
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </FieldWrapper>
 
-          {/* Index in Series + Hardcover ID — 2 column */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-            <FieldWrapper
-              label="Index in Series"
-              htmlFor="book-index-in-series"
-            >
-              <NumberInput
-                id="book-index-in-series"
-                value={formData.indexInSeries}
-                onChange={(val) => updateField("indexInSeries", val ?? 0)}
-                placeholder="0"
-                min={0}
-              />
-            </FieldWrapper>
+                <FieldWrapper label="Pages" htmlFor="book-pages">
+                  <Input
+                    id="book-pages"
+                    type="number"
+                    value={formData.pages ?? ""}
+                    onChange={(e) => {
+                      const raw = e.target.value;
+                      updateField("pages", raw === "" ? null : parseFloat(raw));
+                    }}
+                    placeholder="Page count"
+                    min={0}
+                  />
+                </FieldWrapper>
+              </div>
 
-            <FieldWrapper label="Hardcover ID" htmlFor="book-hardcover-id">
-              <NumberInput
-                id="book-hardcover-id"
-                value={formData.hardcoverId}
-                onChange={(val) => updateField("hardcoverId", val)}
-                placeholder="External ID"
-                min={0}
-              />
-            </FieldWrapper>
-          </div>
+              <FieldWrapper label="Mood" htmlFor="book-mood">
+                <TagInput
+                  id="book-mood"
+                  value={formData.mood}
+                  onChange={(val) => updateField("mood", val)}
+                  placeholder="Add mood tags…"
+                />
+              </FieldWrapper>
 
-          {/* Tags — tag input */}
-          <FieldWrapper label="Tags" htmlFor="book-tags">
-            <TagInput
-              id="book-tags"
-              value={formData.tags}
-              onChange={(val) => updateField("tags", val)}
-              placeholder="Add tags…"
-            />
-          </FieldWrapper>
-        </section>
-      </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+                <FieldWrapper label="Average Rating" htmlFor="book-rating">
+                  <Input
+                    id="book-rating"
+                    type="number"
+                    value={formData.averageRating ?? ""}
+                    onChange={(e) => {
+                      const raw = e.target.value;
+                      updateField(
+                        "averageRating",
+                        raw === "" ? null : parseFloat(raw),
+                      );
+                    }}
+                    placeholder="0.0"
+                    min={0}
+                    max={5}
+                    step={0.1}
+                  />
+                </FieldWrapper>
 
-      {/* ── Sticky Footer ── */}
+                <FieldWrapper label="Ratings Count" htmlFor="book-ratings-count">
+                  <Input
+                    id="book-ratings-count"
+                    type="number"
+                    value={formData.ratingsCount || ""}
+                    onChange={(e) => {
+                      const raw = e.target.value;
+                      updateField(
+                        "ratingsCount",
+                        raw === "" ? 0 : parseInt(raw, 10),
+                      );
+                    }}
+                    placeholder="0"
+                    min={0}
+                  />
+                </FieldWrapper>
+
+                <FieldWrapper label="Reviews Count" htmlFor="book-reviews-count">
+                  <Input
+                    id="book-reviews-count"
+                    type="number"
+                    value={formData.reviewsCount || ""}
+                    onChange={(e) => {
+                      const raw = e.target.value;
+                      updateField(
+                        "reviewsCount",
+                        raw === "" ? 0 : parseInt(raw, 10),
+                      );
+                    }}
+                    placeholder="0"
+                    min={0}
+                  />
+                </FieldWrapper>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                <FieldWrapper
+                  label="Index in Series"
+                  htmlFor="book-index-in-series"
+                >
+                  <Input
+                    id="book-index-in-series"
+                    type="number"
+                    value={formData.indexInSeries || ""}
+                    onChange={(e) => {
+                      const raw = e.target.value;
+                      updateField(
+                        "indexInSeries",
+                        raw === "" ? 0 : parseInt(raw, 10),
+                      );
+                    }}
+                    placeholder="0"
+                    min={0}
+                  />
+                </FieldWrapper>
+              </div>
+
+              <FieldWrapper label="Tags" htmlFor="book-tags">
+                <TagInput
+                  id="book-tags"
+                  value={formData.tags}
+                  onChange={(val) => updateField("tags", val)}
+                  placeholder="Add tags…"
+                />
+              </FieldWrapper>
+            </div>
+          </TabsContent>
+        </div>
+      </Tabs>
+
       <div
         className={cn(
           "sticky bottom-0 z-10",
@@ -399,42 +422,17 @@ export default function BookForm({
           "bg-popover/80 backdrop-blur-xl",
         )}
       >
-        <button
-          type="button"
-          onClick={onCancel}
-          className={cn(
-            "px-4 py-2 text-sm font-medium",
-            "rounded-[var(--radius-md)]",
-            "text-muted-foreground hover:text-foreground",
-            "hover:bg-accent transition-all duration-200",
-            "active:scale-[0.97]",
-          )}
-        >
+        <Button variant="outline" type="button" onClick={onCancel}>
           Cancel
-        </button>
-        <button
-          type="submit"
-          className={cn(
-            "px-5 py-2 text-sm font-medium",
-            "rounded-[var(--radius-md)]",
-            "bg-primary text-primary-foreground",
-            "hover:bg-primary/90 transition-all duration-200",
-            "active:scale-[0.97]",
-            "shadow-sm shadow-primary/20",
-          )}
-        >
+        </Button>
+        <Button type="submit">
           {mode === "create" ? "Create Book" : "Save Changes"}
-        </button>
+        </Button>
       </div>
     </form>
   );
 }
 
-/* ════════════════════════════════
-   Sub-components
-   ════════════════════════════════ */
-
-/** Field label + error wrapper */
 function FieldWrapper({
   label,
   required,
@@ -468,172 +466,5 @@ function FieldWrapper({
         </p>
       )}
     </div>
-  );
-}
-
-/** Styled text input */
-function TextInput({
-  id,
-  value,
-  onChange,
-  placeholder,
-}: {
-  id: string;
-  value: string;
-  onChange: (value: string) => void;
-  placeholder?: string;
-}) {
-  return (
-    <input
-      id={id}
-      type="text"
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      placeholder={placeholder}
-      className={cn(
-        "w-full px-3.5 py-2 text-sm",
-        "rounded-[var(--radius-md)] border border-border",
-        "bg-input/50 transition-all duration-200",
-        "placeholder:text-muted-foreground/30",
-        "focus:outline-none focus:border-ring focus:ring-1 focus:ring-ring/30",
-      )}
-    />
-  );
-}
-
-/** Styled number input */
-function NumberInput({
-  id,
-  value,
-  onChange,
-  placeholder,
-  min,
-  max,
-  step,
-}: {
-  id: string;
-  value: number | null;
-  onChange: (value: number | null) => void;
-  placeholder?: string;
-  min?: number;
-  max?: number;
-  step?: number;
-}) {
-  return (
-    <input
-      id={id}
-      type="number"
-      value={value === null ? "" : value}
-      onChange={(e) => {
-        const raw = e.target.value;
-        if (raw === "") {
-          onChange(null);
-        } else {
-          onChange(parseFloat(raw));
-        }
-      }}
-      placeholder={placeholder}
-      min={min}
-      max={max}
-      step={step}
-      className={cn(
-        "w-full px-3.5 py-2 text-sm",
-        "rounded-[var(--radius-md)] border border-border",
-        "bg-input/50 transition-all duration-200",
-        "placeholder:text-muted-foreground/30",
-        "focus:outline-none focus:border-ring focus:ring-1 focus:ring-ring/30",
-        // Hide spinner arrows for cleaner look
-        "[&::-webkit-inner-spin-button]:appearance-none",
-        "[&::-webkit-outer-spin-button]:appearance-none",
-        "[appearance:textfield]",
-      )}
-    />
-  );
-}
-
-/** Radix Select for ReadingStatus */
-function StatusSelect({
-  value,
-  onChange,
-}: {
-  value: ReadingStatus;
-  onChange: (value: ReadingStatus) => void;
-}) {
-  const colors = readingStatusColors[value];
-
-  return (
-    <Select.Root
-      value={value}
-      onValueChange={(val) => onChange(val as ReadingStatus)}
-    >
-      <Select.Trigger
-        className={cn(
-          "inline-flex items-center justify-between gap-2 w-full",
-          "px-3.5 py-2 text-sm",
-          "rounded-[var(--radius-md)] border border-border",
-          "bg-input/50 transition-all duration-200",
-          "hover:border-border/80",
-          "focus:outline-none focus:border-ring focus:ring-1 focus:ring-ring/30",
-          "data-[placeholder]:text-muted-foreground/40",
-        )}
-      >
-        <span className="flex items-center gap-2">
-          <span
-            className="w-2 h-2 rounded-full shrink-0"
-            style={{ background: colors.dot }}
-          />
-          <Select.Value />
-        </span>
-        <Select.Icon>
-          <ChevronDown size={14} className="text-muted-foreground/50" />
-        </Select.Icon>
-      </Select.Trigger>
-
-      <Select.Portal>
-        <Select.Content
-          position="popper"
-          sideOffset={6}
-          className={cn(
-            "z-[100] min-w-[180px] overflow-hidden",
-            "rounded-[var(--radius-lg)] border border-border",
-            "bg-popover text-popover-foreground",
-            "shadow-lg shadow-black/8 dark:shadow-black/30",
-            "animate-in fade-in-0 zoom-in-[0.97] duration-200",
-          )}
-          style={{
-            transformOrigin: "var(--radix-select-content-transform-origin)",
-          }}
-        >
-          <Select.Viewport className="py-1">
-            {Object.values(ReadingStatus).map((status) => {
-              const statusColors = readingStatusColors[status];
-              return (
-                <Select.Item
-                  key={status}
-                  value={status}
-                  className={cn(
-                    "flex items-center gap-2 px-3 py-2 text-sm",
-                    "cursor-pointer outline-none select-none",
-                    "transition-colors duration-100",
-                    "data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground",
-                  )}
-                >
-                  <span
-                    className="w-2 h-2 rounded-full shrink-0"
-                    style={{ background: statusColors.dot }}
-                  />
-                  <Select.ItemText>
-                    {readingStatusLabels[status]}
-                  </Select.ItemText>
-                  <Select.ItemIndicator className="ml-auto">
-                    <Check size={14} className="text-primary" />
-                  </Select.ItemIndicator>
-                </Select.Item>
-              );
-            })}
-          </Select.Viewport>
-        </Select.Content>
-      </Select.Portal>
-    </Select.Root>
   );
 }

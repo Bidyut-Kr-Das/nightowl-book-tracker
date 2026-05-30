@@ -113,8 +113,8 @@ export default function CoverImageUpload({
           onDrop={handleDrop}
           className={cn(
             "relative flex flex-col items-center justify-center gap-3",
-            "w-full aspect-[2/3] max-w-[200px]",
-            "rounded-[var(--radius-lg)] border-2 border-dashed",
+            "h-84 w-54 max-w-72 ",
+            "rounded-lg border-2 border-dashed",
             "transition-all duration-200 cursor-pointer group",
             isDragging
               ? "border-lamp bg-lamp/5 scale-[1.02]"
@@ -159,8 +159,8 @@ export default function CoverImageUpload({
         >
           <div
             className={cn(
-              "relative w-full aspect-[2/3] max-w-[200px]",
-              "rounded-[var(--radius-md)] overflow-hidden",
+              "relative h-84 w-54 max-w-72",
+              "rounded-md overflow-hidden",
               "book-shadow",
               "transition-transform duration-300",
               isDragging && "scale-[1.02] ring-2 ring-lamp",
@@ -183,6 +183,8 @@ export default function CoverImageUpload({
               src={imageUrl}
               alt="Book cover preview"
               fill
+              // height={2}
+              // width={320}
               className={cn(
                 "object-cover transition-opacity duration-500",
                 imageLoaded && !isLoading ? "opacity-100" : "opacity-0",
