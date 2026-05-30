@@ -2,7 +2,7 @@
 
 import { useState, useRef, useCallback, useEffect, type KeyboardEvent } from "react";
 import { Popover } from "radix-ui";
-import { Search, X, Check, ChevronsUpDown } from "lucide-react";
+import { Search, X, Plus, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 /* ═══════════════════════════════════════════════
@@ -21,6 +21,8 @@ interface MultiSelectPillsProps<T> {
   getKey: (item: T) => string;
   placeholder?: string;
   emptyMessage?: string;
+  onCreateNew?: (name: string) => void;
+  createNewLabel?: string;
 }
 
 export default function MultiSelectPills<T>({
@@ -32,6 +34,8 @@ export default function MultiSelectPills<T>({
   getKey,
   placeholder = "Search…",
   emptyMessage = "No results found",
+  onCreateNew,
+  createNewLabel,
 }: MultiSelectPillsProps<T>) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -39,7 +43,6 @@ export default function MultiSelectPills<T>({
   const searchInputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
-  // Filtered options: exclude already-selected, then filter by search
   const selectedKeys = new Set(selected.map(getKey));
   const filtered = options.filter((opt) => {
     if (selectedKeys.has(getKey(opt))) return false;
@@ -49,15 +52,12 @@ export default function MultiSelectPills<T>({
       .includes(search.toLowerCase());
   });
 
-  // Reset highlight when search or filter changes
   useEffect(() => {
     setHighlightIndex(0);
   }, [search, open]);
 
-  // Focus search input when popover opens
   useEffect(() => {
     if (open) {
-      // Small delay for the popover to render
       requestAnimationFrame(() => searchInputRef.current?.focus());
     } else {
       setSearch("");
@@ -101,12 +101,19 @@ export default function MultiSelectPills<T>({
     }
   }
 
-  // Scroll highlighted item into view
   useEffect(() => {
     if (!listRef.current) return;
     const el = listRef.current.children[highlightIndex] as HTMLElement;
     el?.scrollIntoView({ block: "nearest" });
   }, [highlightIndex]);
+
+  const handleCreateNew = () => {
+    if (onCreateNew && search.trim()) {
+      onCreateNew(search.trim());
+      setSearch("");
+      setOpen(false);
+    }
+  };
 
   return (
     <Popover.Root open={open} onOpenChange={setOpen}>
@@ -139,12 +146,11 @@ export default function MultiSelectPills<T>({
               >
                 {getDisplayValue(item)}
                 <span
-                  // type="button"
                   onClick={(e) => {
                     e.stopPropagation();
                     removeItem(key);
                   }}
-                  className="inline-flex items-center justify-center w-4 h-4 rounded-full hover:bg-foreground/10 text-muted-foreground/60 hover:text-foreground transition-colors duration-150"
+                  className="inline-flex items-center justify-center w-4 h-4 rounded-full hover:bg-foreground/10 text-muted-foreground/60 hover:text-foreground transition-colors duration-150 cursor-pointer"
                   aria-label={`Remove ${getDisplayValue(item)}`}
                 >
                   <X size={10} />
@@ -152,7 +158,7 @@ export default function MultiSelectPills<T>({
               </span>
             );
           })}
-          <ChevronsUpDown
+<ChevronsUpDown
             size={14}
             className="ml-auto shrink-0 text-muted-foreground/40"
           />
@@ -177,7 +183,6 @@ export default function MultiSelectPills<T>({
           }}
           onOpenAutoFocus={(e) => e.preventDefault()}
         >
-          {/* Search bar */}
           <div className="flex items-center gap-2 px-3 py-2.5 border-b border-border">
             <Search size={14} className="text-muted-foreground/50 shrink-0" />
             <input
@@ -191,12 +196,11 @@ export default function MultiSelectPills<T>({
             />
           </div>
 
-          {/* Options list */}
           <div
             ref={listRef}
             className="overflow-y-auto max-h-50 py-1 scroll-smooth"
           >
-            {filtered.length === 0 ? (
+            {filtered.length === 0 && !onCreateNew ? (
               <p className="px-3 py-4 text-center text-xs text-muted-foreground/50">
                 {emptyMessage}
               </p>
@@ -221,6 +225,28 @@ export default function MultiSelectPills<T>({
               ))
             )}
           </div>
+
+          {onCreateNew && (
+            <div className="border-t border-border px-2 py-2">
+              <button
+                type="button"
+                onClick={handleCreateNew}
+                disabled={!search.trim()}
+                className={cn(
+                  "flex items-center gap-2 w-full px-3 py-2 text-sm rounded-md",
+                  "transition-colors duration-100",
+                  search.trim()
+                    ? "text-foreground hover:bg-accent/50"
+                    : "text-muted-foreground/40 cursor-not-allowed",
+                )}
+              >
+                <Plus size={14} className="shrink-0" />
+                <span className="truncate">
+                  {createNewLabel ?? `Create new ${label.toLowerCase()}`}
+                </span>
+              </button>
+            </div>
+          )}
         </Popover.Content>
       </Popover.Portal>
     </Popover.Root>

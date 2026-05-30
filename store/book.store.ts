@@ -20,8 +20,8 @@ export type BookState = {
 
   //library
   books: IBook[];
-  authors: Pick<Author, "name" | "hardcoverId" | "image">[];
-  series: Pick<Series, "hardcoverId" | "name" | "description">[];
+  authors: Pick<Author, "id" | "name" | "hardcoverId" | "image">[];
+  series: Pick<Series, "id" | "hardcoverId" | "name" | "description">[];
 
   //store
   relevant_authors: Pick<Author, "name" | "bio" | "image">[];
@@ -72,23 +72,23 @@ export const useBookStore = create<BookStore>((set) => ({
       set({ books: result, loading: false });
       const authors: Map<
         number,
-        Pick<Author, "hardcoverId" | "name" | "image">
+        Pick<Author, "id" | "hardcoverId" | "name" | "image">
       > = new Map();
       const series: Map<
         number,
-        Pick<Series, "hardcoverId" | "name" | "description">
+        Pick<Series, "id" | "hardcoverId" | "name" | "description">
       > = new Map();
 
       result
         .flatMap((b) => b.authors)
         .forEach((a) => {
-          authors.set(a.hardcoverId!, a);
+          authors.set(a.id, a);
         });
       result
         .flatMap((b) => b.series)
         .filter((s) => s !== null)
         .forEach((s) => {
-          series.set(s?.hardcoverId!, s);
+          series.set(s?.id, s);
         });
 
       set({
