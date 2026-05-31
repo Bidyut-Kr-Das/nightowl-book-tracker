@@ -6,6 +6,7 @@ import { ThemeProvider } from "@/lib/theme-provider";
 import { ClerkProvider } from "@clerk/nextjs";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { MobileDock } from "@/components/mobile-dock";
+import { Toaster } from "sonner";
 
 const displayFont = Cormorant_Garamond({
   subsets: ["latin"],
@@ -77,6 +78,7 @@ export default function RootLayout({
             <TooltipProvider>
               {children}
               <MobileDock />
+              <Toaster position="bottom-right" richColors />
             </TooltipProvider>
           </ThemeProvider>
         </ClerkProvider>

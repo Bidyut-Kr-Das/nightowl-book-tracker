@@ -320,49 +320,49 @@ export async function addBookToLibraryAction(hardCoverBookIds: number[]) {
         // const new_entries = [...db_books, ...createdBooks];
         db_books = [...db_books, ...createdBooks];
       }
-      //create userbook entries for each new book connection
-      const res = await prisma.userBook.createManyAndReturn({
-        data: db_books.map((e) => ({
-          userId: Number(session.externalId),
-          bookId: e.id,
-          status: ReadingStatus.WISHLIST,
-        })),
-        include: {
-          book: {
-            include: {
-              series: {
-                select: {
-                  id: true,
-                  name: true,
-                  hardcoverId: true,
-                  description: true,
-                },
+      // return res;
+    }
+    //create userbook entries for each new book connection
+    const res = await prisma.userBook.createManyAndReturn({
+      data: db_books.map((e) => ({
+        userId: Number(session.externalId),
+        bookId: e.id,
+        status: ReadingStatus.WISHLIST,
+      })),
+      include: {
+        book: {
+          include: {
+            series: {
+              select: {
+                id: true,
+                name: true,
+                hardcoverId: true,
+                description: true,
               },
-              authors: {
-                select: {
-                  id: true,
-                  name: true,
-                  image: true,
-                  hardcoverId: true,
-                },
+            },
+            authors: {
+              select: {
+                id: true,
+                name: true,
+                image: true,
+                hardcoverId: true,
               },
             },
           },
         },
-      });
+      },
+    });
 
-      const normalised: IBook[] = res.map((ub) => {
-        return {
-          ...ub.book,
-          addedAt: ub.createdAt,
-          progress: ub.progress,
-          status: ub.status,
-        };
-      });
+    const normalised: IBook[] = res.map((ub) => {
+      return {
+        ...ub.book,
+        addedAt: ub.createdAt,
+        progress: ub.progress,
+        status: ub.status,
+      };
+    });
 
-      return normalised;
-      // return res;
-    }
+    return normalised;
   } catch (error) {
     console.error("Error While fetching books by id", error);
   }
