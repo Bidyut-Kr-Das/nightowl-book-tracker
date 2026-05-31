@@ -58,7 +58,7 @@ export default function MultiSelectPills<T>({
 
   useEffect(() => {
     if (open) {
-      requestAnimationFrame(() => searchInputRef.current?.focus());
+      // requestAnimationFrame(() => searchInputRef.current?.focus());
     } else {
       setSearch("");
     }
@@ -68,7 +68,7 @@ export default function MultiSelectPills<T>({
     (item: T) => {
       onChange([...selected, item]);
       setSearch("");
-      searchInputRef.current?.focus();
+      // searchInputRef.current?.focus();
     },
     [selected, onChange],
   );

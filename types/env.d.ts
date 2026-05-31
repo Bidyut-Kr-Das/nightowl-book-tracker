@@ -19,6 +19,8 @@ declare namespace NodeJS {
     NEXT_PUBLIC_CLERK_SIGN_UP_FALLBACK_REDIRECT_URL: string;
     CLERK_WEBHOOK_SIGNING_SECRET: string;
 
+    UPSTASH_REDIS_REST_TOKEN: string;
+    UPSTASH_REDIS_REST_URL: string;
     // Allow other environment variables
     [key: string]: string | undefined;
   }

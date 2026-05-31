@@ -67,4 +67,11 @@ export type HardcoverBook = {
   }[];
 };
 
-//store types
+export type CachedAuthor = Omit<
+  Author,
+  "createdAt" | "updatedAt" | "image" | "bio"
+>;
+export type CachedSeries = Omit<
+  Series,
+  "createdAt" | "updatedAt" | "description"
+>;

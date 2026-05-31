@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { ReadingStatus } from "@/lib/generated/prisma/enums";
 import { useBookStore } from "@/store/book.store";
@@ -76,7 +76,18 @@ export default function BookForm({
   const [errors, setErrors] = useState<FormErrors>({});
   const [touched, setTouched] = useState<Set<string>>(new Set());
 
-  const { authors: storeAuthors, series: storeSeries } = useBookStore();
+  const {
+    authors: storeAuthors,
+    series: storeSeries,
+    getAllAuthors,
+    getAllSeries,
+  } = useBookStore();
+
+  useEffect(() => {
+    (async () => {
+      await Promise.all([getAllAuthors(), getAllSeries()]);
+    })();
+  }, []);
 
   const updateField = useCallback(
     <K extends keyof BookFormData>(key: K, value: BookFormData[K]) => {
@@ -358,7 +369,10 @@ export default function BookForm({
                 </FieldWrapper>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                  <FieldWrapper label="Release Date" htmlFor="book-release-date">
+                  <FieldWrapper
+                    label="Release Date"
+                    htmlFor="book-release-date"
+                  >
                     <Popover>
                       <PopoverTrigger asChild>
                         <Button
@@ -396,7 +410,10 @@ export default function BookForm({
                       value={formData.pages ?? ""}
                       onChange={(e) => {
                         const raw = e.target.value;
-                        updateField("pages", raw === "" ? null : parseFloat(raw));
+                        updateField(
+                          "pages",
+                          raw === "" ? null : parseFloat(raw),
+                        );
                       }}
                       placeholder="Page count"
                       min={0}

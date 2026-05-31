@@ -8,10 +8,17 @@ import {
   SEARCH_BOOKS_QUERY,
   SUGGEST_AUTHORS,
 } from "@/constants/hardcover-gql-queries";
+import { REDIS_KEYS } from "@/constants/redis-keys";
 import { Author, ReadingStatus } from "@/lib/generated/prisma/client";
 import { hardCoverClient } from "@/lib/hardcover-client";
+import { redis } from "@/lib/redis";
 import { prisma } from "@/prisma/prisma";
-import { HardcoverBooksResponse, IBook } from "@/types/interface";
+import {
+  CachedAuthor,
+  CachedSeries,
+  HardcoverBooksResponse,
+  IBook,
+} from "@/types/interface";
 import { mapBooksResponse } from "@/utils/bookUtils";
 import { currentUser } from "@clerk/nextjs/server";
 import { gql } from "graphql-request";
@@ -418,6 +425,12 @@ export async function createUpdateBookAction(data: BookFormData) {
     throw new Error("User Not authenticated");
   }
 
+  if (authors.find((a) => a.id < 0)) {
+    await redis.del(REDIS_KEYS.AUTHORS_ALL);
+  }
+  if (series.find((s) => s.id < 0)) {
+    await redis.del(REDIS_KEYS.SERIES_ALL);
+  }
   try {
     const [book, userBook] = await prisma.$transaction(
       [
@@ -507,33 +520,65 @@ export async function createUpdateBookAction(data: BookFormData) {
   }
 }
 
-export async function getAllAuthors() {
+export async function getAllAuthorsAction() {
   try {
-    return await prisma.author.findMany({
+    const cached = await redis.get<CachedAuthor[]>(REDIS_KEYS.AUTHORS_ALL);
+
+    if (cached) {
+      return cached;
+    }
+
+    const res = await prisma.author.findMany({
       select: {
         id: true,
         name: true,
-        image: true,
-        bio: true,
+        // image: true,
+        // bio: true,
         hardcoverId: true,
       },
     });
+
+    await redis.set(
+      REDIS_KEYS.AUTHORS_ALL,
+      res.map((a) => ({
+        id: a.id,
+        hardcoverId: a.hardcoverId,
+        name: a.name,
+      })),
+    );
+    return res;
   } catch (error) {
     console.error(error);
     throw new Error("Failed to fetch authors");
   }
 }
 
-export async function getAllSeries() {
+export async function getAllSeriesAction() {
   try {
-    return await prisma.series.findMany({
+    const cached_res = await redis.get<CachedSeries[]>(REDIS_KEYS.SERIES_ALL);
+
+    if (cached_res) {
+      return cached_res;
+    }
+
+    const res = await prisma.series.findMany({
       select: {
         id: true,
         name: true,
-        description: true,
+        // description: true,
         hardcoverId: true,
       },
     });
+
+    await redis.set(
+      REDIS_KEYS.SERIES_ALL,
+      res.map((s) => ({
+        id: s.id,
+        name: s.name,
+        hardcoverId: s.hardcoverId,
+      })),
+    );
+    return res;
   } catch (error) {
     console.error(error);
     throw new Error("Failed to fetch authors");

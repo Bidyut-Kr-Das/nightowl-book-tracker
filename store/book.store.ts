@@ -5,12 +5,14 @@ import { ReadingStatus } from "@/lib/generated/prisma/enums";
 import {
   addBookToLibraryAction,
   createUpdateBookAction,
+  getAllAuthorsAction,
   // createUpdateBookAction,
   getAllBooks,
+  getAllSeriesAction,
   getBookBySlugAction,
   searchBookStore,
 } from "@/server/book.action";
-import { IBook } from "@/types/interface";
+import { CachedAuthor, CachedSeries, IBook } from "@/types/interface";
 import { create } from "zustand";
 
 export type BookState = {
@@ -20,8 +22,8 @@ export type BookState = {
 
   //library
   books: IBook[];
-  authors: Pick<Author, "id" | "name" | "hardcoverId" | "image">[];
-  series: Pick<Series, "id" | "hardcoverId" | "name" | "description">[];
+  authors: Pick<Author, "id" | "name" | "hardcoverId">[];
+  series: Pick<Series, "id" | "hardcoverId" | "name">[];
 
   //store
   relevant_authors: Pick<Author, "name" | "bio" | "image">[];
@@ -56,6 +58,8 @@ type BookActions = {
   getSharedBook: (slug: string) => Promise<void>;
 
   getAllLibraryBooks: () => Promise<void>;
+  getAllAuthors: () => Promise<void>;
+  getAllSeries: () => Promise<void>;
 
   createOrUpdateBook: (data: BookFormData) => Promise<void>;
 };
@@ -70,31 +74,31 @@ export const useBookStore = create<BookStore>((set) => ({
     try {
       const result = await getAllBooks();
       set({ books: result, loading: false });
-      const authors: Map<
-        number,
-        Pick<Author, "id" | "hardcoverId" | "name" | "image">
-      > = new Map();
-      const series: Map<
-        number,
-        Pick<Series, "id" | "hardcoverId" | "name" | "description">
-      > = new Map();
+      // const authors: Map<
+      //   number,
+      //   Pick<Author, "id" | "hardcoverId" | "name" | "image">
+      // > = new Map();
+      // const series: Map<
+      //   number,
+      //   Pick<Series, "id" | "hardcoverId" | "name" | "description">
+      // > = new Map();
 
-      result
-        .flatMap((b) => b.authors)
-        .forEach((a) => {
-          authors.set(a.id, a);
-        });
-      result
-        .flatMap((b) => b.series)
-        .filter((s) => s !== null)
-        .forEach((s) => {
-          series.set(s?.id, s);
-        });
+      // result
+      //   .flatMap((b) => b.authors)
+      //   .forEach((a) => {
+      //     authors.set(a.id, a);
+      //   });
+      // result
+      //   .flatMap((b) => b.series)
+      //   .filter((s) => s !== null)
+      //   .forEach((s) => {
+      //     series.set(s?.id, s);
+      //   });
 
-      set({
-        authors: Array.from(authors.values()),
-        series: Array.from(series.values()),
-      });
+      // set({
+      //   authors: Array.from(authors.values()),
+      //   series: Array.from(series.values()),
+      // });
     } catch (error) {
       console.error("Failed to fetch books:", error);
       set({ error: "Failed to fetch books", loading: false });
@@ -152,7 +156,7 @@ export const useBookStore = create<BookStore>((set) => ({
     }
     set((state) => ({
       ...state,
-      books: [...state.books, ...res],
+      books: [...res, ...state.books],
     }));
   },
   getSharedBook: async (slug) => {
@@ -166,7 +170,8 @@ export const useBookStore = create<BookStore>((set) => ({
 
   createOrUpdateBook: async (data) => {
     set({ loading: true, error: null });
-    console.log(data);
+
+    // console.log(data);
     try {
       const result = await createUpdateBookAction(data);
       if (!result) {
@@ -175,10 +180,13 @@ export const useBookStore = create<BookStore>((set) => ({
         return;
       }
       set((state) => ({
+        ...state,
         books: result.id
           ? state.books.map((b) => (b.id === result.id ? result : b))
           : [result, ...state.books],
         loading: false,
+        authors: [],
+        series: [],
       }));
       // return result;
       // return null;
@@ -187,6 +195,32 @@ export const useBookStore = create<BookStore>((set) => ({
       set({ error: "Failed to save book", loading: false });
       return;
     }
+  },
+
+  getAllAuthors: async () => {
+    const authorMap = new Map<number, CachedAuthor>();
+    const res = await getAllAuthorsAction();
+
+    res.forEach((a) => {
+      authorMap.set(a.id, a);
+    });
+
+    set({
+      authors: Array.from(authorMap.values()),
+    });
+  },
+
+  getAllSeries: async () => {
+    const seriesMap = new Map<number, CachedSeries>();
+    const res = await getAllSeriesAction();
+
+    res.forEach((a) => {
+      seriesMap.set(a.id, a);
+    });
+
+    set({
+      series: Array.from(seriesMap.values()),
+    });
   },
 
   getBooksByStatus: (status: ReadingStatus) => {},
