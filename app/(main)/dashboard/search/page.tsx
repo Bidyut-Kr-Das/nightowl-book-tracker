@@ -33,11 +33,13 @@ import { IBook } from "@/types/interface";
 import { useBookStore } from "@/store/book.store";
 import { useDebounce } from "@/hooks/use-debounce";
 import type { Author } from "@/lib/generated/prisma/client";
+import { useMobile } from "@/hooks/use-mobile";
 
 /* ═══════════════════════════════════════════════
    Constants & Types
    ═══════════════════════════════════════════════ */
-const BOOKS_PER_SHELF = 5;
+const BOOKS_PER_SHELF_DESKTOP = 7;
+const BOOKS_PER_SHELF_MOBILE = 4;
 
 type GroupMode = "none" | "author" | "series";
 type SearchMode = "library" | "store";
@@ -221,7 +223,7 @@ function StoreLoadingState() {
         <div key={shelfIdx} className="mb-10 md:mb-14">
           <div className="relative">
             <div className="flex items-end gap-8 md:gap-10 pb-0.5 px-4">
-              {Array.from({ length: BOOKS_PER_SHELF }).map((_, i) => (
+              {Array.from({ length: BOOKS_PER_SHELF_DESKTOP }).map((_, i) => (
                 <div
                   key={i}
                   className="shrink-0 rounded-lg overflow-hidden"
@@ -521,7 +523,15 @@ function FlatShelves({
   books: IBook[];
   shelfLabel?: string;
 }) {
-  const shelves = useMemo(() => chunkArray(books, BOOKS_PER_SHELF), [books]);
+  const isMobile = useMobile();
+  const shelves = useMemo(
+    () =>
+      chunkArray(
+        books,
+        isMobile ? BOOKS_PER_SHELF_MOBILE : BOOKS_PER_SHELF_DESKTOP,
+      ),
+    [books],
+  );
 
   return (
     <div>
@@ -545,7 +555,10 @@ function FlatShelves({
         <BookshelfRow
           key={`shelf-${shelfIndex}`}
           books={shelfBooks}
-          baseIndex={shelfIndex * BOOKS_PER_SHELF}
+          baseIndex={
+            shelfIndex *
+            (isMobile ? BOOKS_PER_SHELF_MOBILE : BOOKS_PER_SHELF_DESKTOP)
+          }
           delay={shelfIndex * 0.08}
         />
       ))}
@@ -1040,9 +1053,6 @@ export default function SearchPage() {
                 <div className="flex items-center gap-2 flex-wrap mb-3">
                   {/* Filters toggle */}
 
-                  {/* Separator dot */}
-                  <span className="w-1 h-1 rounded-full bg-border shrink-0 hidden sm:block" />
-
                   {/* Group-by toggles */}
                   <GroupToggle
                     icon={User}
@@ -1060,6 +1070,8 @@ export default function SearchPage() {
                       setGroupMode(groupMode === "series" ? "none" : "series")
                     }
                   />
+                  {/* Separator dot */}
+                  {/* <span className="w-1 h-1 rounded-full bg-border shrink-0 hidden sm:block" /> */}
 
                   <button
                     onClick={() => setFiltersExpanded(!filtersExpanded)}

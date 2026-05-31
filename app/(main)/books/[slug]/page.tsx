@@ -61,7 +61,7 @@ function RelatedBook({ book }: { book: IBook }) {
           {book.title}
         </p>
         <p className="text-xs text-muted-foreground truncate mt-0.5">
-          {book.authors.join(", ")}
+          {book.authors.map((a) => a.name).join(", ")}
         </p>
       </div>
     </Link>
@@ -119,7 +119,11 @@ export default function BookDetailPage({
         .filter((b) => b.id !== book.id)
         .filter(
           (b) =>
-            (book.series && b.series === book.series) ||
+            (book.series &&
+              b.series &&
+              b.series.some((bs) =>
+                book.series?.some((series) => series.id === bs.id),
+              )) ||
             b.genres.some((g) => book.genres.includes(g)),
         )
         .slice(0, 4);
@@ -454,7 +458,7 @@ export default function BookDetailPage({
             {book.genres.map((g) => (
               <span
                 key={g}
-                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-muted mix-blend-multiply text-xs text-muted-foreground font-medium"
+                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-muted mix-blend-multiply dark:mix-blend-exclusion text-xs text-muted-foreground font-medium"
               >
                 <Hash size={10} />
                 {g}
