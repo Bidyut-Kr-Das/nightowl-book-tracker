@@ -97,8 +97,6 @@ export default function BookFormDialog({
     onOpenChange(false);
   }
 
-  
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <AnimatePresence>
@@ -107,7 +105,7 @@ export default function BookFormDialog({
             className={cn(
               // Override shadcn defaults for our custom layout
               // "top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2",
-              "max-w-4xl sm:max-w-4xl w-[calc(100vw-3rem)] max-h-[90vh]",
+              "max-w-4xl sm:max-w-4xl w-[calc(100vw-3rem)] max-h-[90vh] h-[80vh]",
               "rounded-none md:rounded-xl",
               "border-0 md:border border-border",
               "p-0",
@@ -119,7 +117,7 @@ export default function BookFormDialog({
             forceMount
           >
             <motion.div
-              className="flex flex-col overflow-hidden"
+              className="flex flex-col overflow-hidden flex-1"
               initial={{ opacity: 0, scale: 0.96, y: 8 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.98, y: 4 }}

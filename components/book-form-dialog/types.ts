@@ -39,7 +39,7 @@ export interface BookFormData {
   description: string;
   headline: string;
   genres: string[];
-  releaseDate: string;
+  releaseDate: string | null;
   pages: number | null;
   mood: string[];
   averageRating: number | null;
@@ -112,7 +112,7 @@ export const emptyFormData: BookFormData = {
   description: "",
   headline: "",
   genres: [],
-  releaseDate: "",
+  releaseDate: null,
   pages: null,
   mood: [],
   averageRating: null,

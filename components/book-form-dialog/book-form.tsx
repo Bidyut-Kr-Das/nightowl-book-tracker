@@ -199,7 +199,7 @@ export default function BookForm({
     <>
       <form
         onSubmit={handleSubmit}
-        className="flex flex-col h-120 overflow-y-auto"
+        className="flex flex-col h-full overflow-y-auto"
       >
         <Tabs
           defaultValue="basic"

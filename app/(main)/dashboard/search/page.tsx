@@ -812,8 +812,8 @@ export default function SearchPage() {
   }, [searchMode, storeFilter, query]);
   // ── Zustand store ──
   const {
-    books: allBooks,
     relevant_books,
+    books: allBooks,
     relevant_authors,
     flag,
     loading,

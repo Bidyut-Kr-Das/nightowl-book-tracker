@@ -72,7 +72,7 @@ export default function RootLayout({
         />
         <link rel="manifest" href="/site.webmanifest"></link>
       </head>
-      <body className="min-h-dvh max-h-dvh relative flex flex-col ">
+      <body className="min-h-dvh max-h-dvh relative flex flex-col overflow-hidden ">
         <ClerkProvider>
           <ThemeProvider>
             <TooltipProvider>

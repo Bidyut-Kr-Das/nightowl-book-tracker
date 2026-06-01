@@ -53,9 +53,13 @@ type BookActions = {
   browseStoreAuthors: ({ query }: { query: string }) => Promise<void>;
   browseStoreSeries: ({ query }: { query: string }) => Promise<void>;
 
-  addBookToLibrary: ({}: { hardCoverBookId: number }) => Promise<void>;
+  addBookToLibrary: ({}: {
+    hardCoverBookIds?: number[];
+    ids?: number[];
+    userId?: string;
+  }) => Promise<void>;
 
-  getSharedBook: (slug: string) => Promise<void>;
+  getSharedBook: (params: { slug: string; userId?: string }) => Promise<void>;
 
   getAllLibraryBooks: () => Promise<void>;
   getAllAuthors: () => Promise<void>;
@@ -143,14 +147,19 @@ export const useBookStore = create<BookStore>((set) => ({
     }
     set({ loading: false });
   },
+
   browseStoreSeries: async ({ query }) => {
     //work in progress
     // set({});
   },
 
-  addBookToLibrary: async ({ hardCoverBookId }) => {
+  addBookToLibrary: async ({ hardCoverBookIds, ids, userId }) => {
     // set({ loading: true });
-    const res = await addBookToLibraryAction([hardCoverBookId]);
+    const res = await addBookToLibraryAction({
+      hardCoverBookIds: hardCoverBookIds ?? null,
+      ids: ids ?? null,
+      userId,
+    });
     if (!res) {
       return;
     }
@@ -159,9 +168,9 @@ export const useBookStore = create<BookStore>((set) => ({
       books: [...res, ...state.books],
     }));
   },
-  getSharedBook: async (slug) => {
+  getSharedBook: async ({ slug, userId }) => {
     set({ loading: true });
-    const res = await getBookBySlugAction(slug);
+    const res = await getBookBySlugAction(slug, userId);
     set({
       sharedBook: res ?? null,
       loading: false,
@@ -171,7 +180,7 @@ export const useBookStore = create<BookStore>((set) => ({
   createOrUpdateBook: async (data) => {
     set({ loading: true, error: null });
 
-    // console.log(data);
+    console.log("data", data);
     try {
       const result = await createUpdateBookAction(data);
       if (!result) {
@@ -179,11 +188,14 @@ export const useBookStore = create<BookStore>((set) => ({
         // return null;
         return;
       }
+
+      console.log("result", result);
       set((state) => ({
         ...state,
-        books: result.id
-          ? state.books.map((b) => (b.id === result.id ? result : b))
-          : [result, ...state.books],
+        books:
+          data.id > 0
+            ? state.books.map((b) => (b.id === result.id ? result : b))
+            : [result, ...state.books],
         loading: false,
         authors: [],
         series: [],

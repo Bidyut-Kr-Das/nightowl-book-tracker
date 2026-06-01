@@ -11,6 +11,7 @@ import {
 import { REDIS_KEYS } from "@/constants/redis-keys";
 import { Author, ReadingStatus } from "@/lib/generated/prisma/client";
 import { hardCoverClient } from "@/lib/hardcover-client";
+import { hashids } from "@/lib/hashids";
 import { redis } from "@/lib/redis";
 import { prisma } from "@/prisma/prisma";
 import {
@@ -22,6 +23,7 @@ import {
 import { mapBooksResponse } from "@/utils/bookUtils";
 import { currentUser } from "@clerk/nextjs/server";
 import { gql } from "graphql-request";
+import { BookImage } from "lucide-react";
 
 export async function getAllBooks() {
   try {
@@ -233,109 +235,171 @@ export async function checkAuthorName(query: string) {
   }
 }
 
-export async function addBookToLibraryAction(hardCoverBookIds: number[]) {
+export async function addBookToLibraryAction({
+  hardCoverBookIds,
+  ids,
+  userId,
+}: {
+  hardCoverBookIds: number[] | null;
+  ids: number[] | null;
+  userId?: string;
+}) {
   try {
     const session = await currentUser();
     if (!session) {
       throw new Error("user not authenticated");
     }
+
+    //if ids are present create a final list which will be used at the end.
+    //this list will be extended as the logic required
+    let final_list =
+      ids && ids.length
+        ? ids.map((i) => ({
+            id: i,
+            hardcoverId: null as number | null,
+            bookImage: null,
+          }))
+        : [];
     //step 1: CHECK OUR DB IF THE BOOK IS AVAILABLE BASED ON HARDCOVER ID
-    const uniqueSets = new Set(hardCoverBookIds);
+    if (hardCoverBookIds && hardCoverBookIds.length) {
+      const uniqueSets = new Set(hardCoverBookIds);
 
-    let db_books = await prisma.book.findMany({
-      where: {
-        hardcoverId: {
-          in: [...uniqueSets],
+      let db_books = await prisma.book.findMany({
+        where: {
+          hardcoverId: {
+            in: [...uniqueSets],
+          },
         },
-      },
-      select: {
-        id: true,
-        hardcoverId: true,
-      },
-    });
-
-    //remove all the hardcover ids already present in the db
-    for (const book of db_books) {
-      if (book.hardcoverId) uniqueSets.delete(book.hardcoverId);
-    }
-
-    //if there is no new books to fetch dont call the hardcover api
-    if (uniqueSets.size > 0) {
-      //get all the unavailable books
-      const response = await hardCoverClient.request<HardcoverBooksResponse>(
-        GET_BOOKS_BY_IDS,
-        {
-          bookIds: [...uniqueSets],
+        select: {
+          id: true,
+          hardcoverId: true,
         },
-      );
+      });
 
-      // for each new books create an entry and connect or create to existing series and authors.
-      if (response.books.length) {
-        const createdBooks = await Promise.all(
-          response.books.map((b) => {
-            return prisma.book.create({
-              data: {
-                hardcoverId: b.id,
-                title: b.title,
-                subtitle: b.subtitle,
-                description: b.description,
-                headline: b.headline,
-                releaseDate: new Date(b.release_date || "17-05-2026"),
-                pages: b.pages,
-                authors: {
-                  connectOrCreate: b.contributions.map((c) => ({
-                    where: {
-                      hardcoverId: c.author.id,
-                    },
-                    create: {
-                      name: c.author.name,
-                      image: c.author.image ? c.author.image.url : null,
-                      hardcoverId: c.author.id,
-                      bio: c.author.bio,
-                    },
-                  })),
-                },
-                series: {
-                  connectOrCreate: b.book_series.map((bs) => ({
-                    where: {
-                      hardcoverId: bs.series.id,
-                    },
-                    create: {
-                      hardcoverId: bs.series.id,
-                      description: bs.series.description,
-                      name: bs.series.name,
-                    },
-                  })),
-                },
-                averageRating: Number(b.rating?.toFixed(1)),
-                ratingsCount: b.ratings_count,
-                coverImage: b.image?.url || null,
-                genres: b.cached_tags["Genre"]?.map((t: any) => t.tag),
-                reviewsCount: b.reviews_count,
-                tags: b.cached_tags["Tag"]?.map((t: any) => t.tag),
-                slug: b.slug,
-              },
-              select: {
-                hardcoverId: true,
-                id: true,
-              },
-            });
-          }),
+      //remove all the hardcover ids already present in the db
+      for (const book of db_books) {
+        if (book.hardcoverId) uniqueSets.delete(book.hardcoverId);
+        //push to final list for tracking
+        final_list.push({ ...book, bookImage: null });
+      }
+
+      //if there is no new books to fetch dont call the hardcover api
+      if (uniqueSets.size > 0) {
+        //get all the unavailable books
+        const response = await hardCoverClient.request<HardcoverBooksResponse>(
+          GET_BOOKS_BY_IDS,
+          {
+            bookIds: [...uniqueSets],
+          },
         );
 
-        //combine with all the old books and new books
-        // const new_entries = [...db_books, ...createdBooks];
-        db_books = [...db_books, ...createdBooks];
+        // for each new books create an entry and connect or create to existing series and authors.
+        if (response.books.length) {
+          const createdBooks = await Promise.all(
+            response.books.map((b) => {
+              return prisma.book.create({
+                data: {
+                  hardcoverId: b.id,
+                  title: b.title,
+                  subtitle: b.subtitle,
+                  description: b.description,
+                  headline: b.headline,
+                  releaseDate: new Date(b.release_date || "17-05-2026"),
+                  pages: b.pages,
+                  authors: {
+                    connectOrCreate: b.contributions.map((c) => ({
+                      where: {
+                        hardcoverId: c.author.id,
+                      },
+                      create: {
+                        name: c.author.name,
+                        image: c.author.image ? c.author.image.url : null,
+                        hardcoverId: c.author.id,
+                        bio: c.author.bio,
+                      },
+                    })),
+                  },
+                  series: {
+                    connectOrCreate: b.book_series.map((bs) => ({
+                      where: {
+                        hardcoverId: bs.series.id,
+                      },
+                      create: {
+                        hardcoverId: bs.series.id,
+                        description: bs.series.description,
+                        name: bs.series.name,
+                      },
+                    })),
+                  },
+                  averageRating: Number(b.rating?.toFixed(1)),
+                  ratingsCount: b.ratings_count,
+                  coverImage: b.image?.url || null,
+                  genres: b.cached_tags["Genre"]?.map((t: any) => t.tag),
+                  reviewsCount: b.reviews_count,
+                  tags: b.cached_tags["Tag"]?.map((t: any) => t.tag),
+                  slug: b.slug,
+                },
+                select: {
+                  hardcoverId: true,
+                  id: true,
+                },
+              });
+            }),
+          );
+
+          //combine with all the old books and new books
+          // const new_entries = [...db_books, ...createdBooks];
+          final_list = [
+            ...final_list,
+            ...createdBooks.map((cb) => ({
+              ...cb,
+              bookImage: null,
+            })),
+          ];
+        }
+        // return res;
       }
-      // return res;
     }
+    if (userId) {
+      const user = hashids.decode(userId);
+      const coverImageList = await Promise.all(
+        final_list.map(async (item) => {
+          return prisma.userBook.findUnique({
+            where: {
+              userId_bookId: {
+                userId: user as unknown as number,
+                bookId: item.id,
+              },
+              bookImage: {
+                not: null,
+              },
+            },
+            select: {
+              bookId: true,
+              bookImage: true,
+            },
+          });
+        }),
+      );
+      final_list.forEach((item) => {
+        const matched = coverImageList.find((i) => i?.bookId === item.id);
+        return {
+          ...item,
+          BookImage: matched ? matched.bookImage : null,
+        };
+      });
+    }
+
     //create userbook entries for each new book connection
     const res = await prisma.userBook.createManyAndReturn({
-      data: db_books.map((e) => ({
-        userId: Number(session.externalId),
-        bookId: e.id,
-        status: ReadingStatus.WISHLIST,
-      })),
+      data: final_list.map((e) => {
+        return {
+          userId: Number(session.externalId),
+          bookId: e.id,
+          status: ReadingStatus.WISHLIST,
+          bookImage: e.bookImage,
+        };
+      }),
       include: {
         book: {
           include: {
@@ -366,6 +430,7 @@ export async function addBookToLibraryAction(hardCoverBookIds: number[]) {
         addedAt: ub.createdAt,
         progress: ub.progress,
         status: ub.status,
+        coverImage: ub.bookImage ?? ub.book.coverImage,
       };
     });
 
@@ -375,7 +440,7 @@ export async function addBookToLibraryAction(hardCoverBookIds: number[]) {
   }
 }
 
-export async function getBookBySlugAction(slug: string) {
+export async function getBookBySlugAction(slug: string, userId?: string) {
   try {
     const res = await prisma.book.findUnique({
       where: {
@@ -398,6 +463,22 @@ export async function getBookBySlugAction(slug: string) {
         },
       },
     });
+
+    if (userId && res) {
+      const user = hashids.decode(userId);
+      const coverImage = await prisma.userBook.findUnique({
+        where: {
+          userId_bookId: {
+            userId: user as unknown as number,
+            bookId: res.id,
+          },
+        },
+        select: {
+          bookImage: true,
+        },
+      });
+      if (coverImage) res.coverImage = coverImage.bookImage;
+    }
 
     return {
       ...res,
@@ -433,88 +514,165 @@ export async function createUpdateBookAction(data: BookFormData) {
   }
   try {
     const [book, userBook] = await prisma.$transaction(
-      [
-        prisma.book.update({
-          where: {
-            id: data.id,
-          },
-          data: {
-            ...bookData,
-            releaseDate: new Date(bookData.releaseDate),
-            authors: {
-              set: [],
-              connectOrCreate: authors.map((a) => ({
-                where: {
-                  id: a.id,
+      async () => {
+        const created_book = await (id < 0
+          ? prisma.book.create({
+              data: {
+                ...bookData,
+                releaseDate: bookData.releaseDate
+                  ? new Date(bookData.releaseDate)
+                  : null,
+                slug:
+                  bookData.slug ??
+                  bookData.title.toLowerCase().split(" ").join("-"),
+                authors: {
+                  // set: [],
+                  connectOrCreate: authors.map((a) => ({
+                    where: {
+                      id: a.id,
+                    },
+                    create: {
+                      name: a.name,
+                      hardcoverId: a.hardcoverId ?? null,
+                      bio: null,
+                      image: a.image ?? null,
+                    },
+                  })),
                 },
-                create: {
-                  name: a.name,
-                  hardcoverId: a.hardcoverId ?? null,
-                  bio: null,
-                  image: a.image ?? null,
+                series: {
+                  // set: [],
+                  connectOrCreate: series.map((s) => ({
+                    where: {
+                      id: s.id,
+                    },
+                    create: {
+                      name: s.name,
+                      description: s.description,
+                      hardcoverId: s.hardcoverId,
+                    },
+                  })),
                 },
-              })),
-            },
-            series: {
-              set: [],
-              connectOrCreate: series.map((s) => ({
-                where: {
-                  id: s.id,
-                },
-                create: {
-                  name: s.name,
-                  description: s.description,
-                  hardcoverId: s.hardcoverId,
-                },
-              })),
-            },
-          },
-          include: {
-            series: {
-              select: {
-                id: true,
-                name: true,
-                hardcoverId: true,
-                description: true,
               },
-            },
-            authors: {
-              select: {
-                id: true,
-                name: true,
-                image: true,
-                hardcoverId: true,
+              include: {
+                series: {
+                  select: {
+                    id: true,
+                    name: true,
+                    hardcoverId: true,
+                    description: true,
+                  },
+                },
+                authors: {
+                  select: {
+                    id: true,
+                    name: true,
+                    image: true,
+                    hardcoverId: true,
+                  },
+                },
               },
-            },
-          },
-        }),
-        prisma.userBook.update({
+            })
+          : prisma.book.update({
+              where: {
+                id: data.id,
+              },
+              data: {
+                ...bookData,
+                releaseDate: bookData.releaseDate
+                  ? new Date(bookData.releaseDate)
+                  : null,
+                slug:
+                  bookData.slug ??
+                  bookData.title.toLowerCase().split(" ").join("-"),
+                authors: {
+                  set: [],
+                  connectOrCreate: authors.map((a) => ({
+                    where: {
+                      id: a.id,
+                    },
+                    create: {
+                      name: a.name,
+                      hardcoverId: a.hardcoverId ?? null,
+                      bio: null,
+                      image: a.image ?? null,
+                    },
+                  })),
+                },
+                series: {
+                  set: [],
+                  connectOrCreate: series.map((s) => ({
+                    where: {
+                      id: s.id,
+                    },
+                    create: {
+                      name: s.name,
+                      description: s.description,
+                      hardcoverId: s.hardcoverId,
+                    },
+                  })),
+                },
+              },
+              include: {
+                series: {
+                  select: {
+                    id: true,
+                    name: true,
+                    hardcoverId: true,
+                    description: true,
+                  },
+                },
+                authors: {
+                  select: {
+                    id: true,
+                    name: true,
+                    image: true,
+                    hardcoverId: true,
+                  },
+                },
+              },
+            }));
+
+        const created_userBook = await prisma.userBook.upsert({
           where: {
             userId_bookId: {
               userId: Number(user.externalId),
-              bookId: id,
+              bookId: created_book.id,
             },
           },
-          data: {
+          update: {
             bookImageId: fileId,
             bookImage: coverImage,
             status: status,
           },
-        }),
-      ],
+          create: {
+            userId: Number(user.externalId),
+            bookId: created_book.id,
+            status: status ?? ReadingStatus.WISHLIST,
+            bookImage: coverImage ?? null,
+            bookImageId: fileId ?? null,
+          },
+        });
+        return [created_book, created_userBook];
+      },
+
       {
         timeout: 10000,
       },
     );
     console.log(userBook);
 
+    const cover = "bookImage" in userBook ? userBook.bookImage : undefined;
+    const progress = "progress" in userBook ? userBook.progress : null;
+    const statusNew =
+      "status" in userBook ? userBook.status : ReadingStatus.WISHLIST;
+
     return {
       ...book,
-      ...(userBook.bookImage ? { coverImage: userBook.bookImage } : {}),
+      ...(cover ? { coverImage: cover } : {}),
       addedAt: userBook.createdAt,
-      progress: userBook.progress,
-      status: userBook.status,
-    };
+      progress: progress,
+      status: statusNew,
+    } as IBook;
   } catch (error) {
     console.error(error);
   }
@@ -582,5 +740,19 @@ export async function getAllSeriesAction() {
   } catch (error) {
     console.error(error);
     throw new Error("Failed to fetch authors");
+  }
+}
+
+export async function getSharedById() {
+  try {
+    const user = await currentUser();
+    if (!user) {
+      return null;
+    }
+    const sharedBy = hashids.encode(Number(user.externalId));
+
+    return sharedBy;
+  } catch (error) {
+    console.error(error);
   }
 }

@@ -30,6 +30,7 @@ import { ReadingStatus } from "@/lib/generated/prisma/enums";
 import { format } from "date-fns";
 import { BookDetailsLoading } from "./_components/book-details-loading";
 import BookFormDialog from "@/components/book-form-dialog/book-form-dialog";
+import { getSharedById } from "@/server/book.action";
 
 const statusDescriptions: Record<string, string> = {
   reading: "You're currently making your way through this one.",
@@ -80,6 +81,7 @@ export default function BookDetailPage({
   const { slug } = use(params);
   const searchParams = useSearchParams();
   const mode = searchParams.get("mode");
+  const sharedBy = searchParams.get("sharedBy");
   const router = useRouter();
   const [localLoading, setLocalLoading] = useState(true);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -89,7 +91,7 @@ export default function BookDetailPage({
   useEffect(() => {
     if (mode === "share") {
       (async () => {
-        await getSharedBook(slug);
+        await getSharedBook({ slug, userId: sharedBy ?? undefined });
         setLocalLoading(false);
       })();
     } else {
@@ -170,12 +172,12 @@ export default function BookDetailPage({
   }
 
   function performAction(): void {
-    if (book && mode === "store")
+    if (book && mode === "store") {
       toast.promise(
         addBookToLibrary({
-          hardCoverBookId: book.hardcoverId
-            ? Number(book.hardcoverId)
-            : Number(book.id),
+          hardCoverBookIds: book.hardcoverId
+            ? [Number(book.hardcoverId)]
+            : [Number(book.id)],
         }),
         {
           loading: "Adding the book to library",
@@ -183,11 +185,33 @@ export default function BookDetailPage({
           error: "Something went wrong",
         },
       );
+    } else if (book && mode === "share") {
+      toast.promise(
+        addBookToLibrary({
+          ids: [book.id],
+          userId: sharedBy ?? undefined,
+        }),
+        {
+          loading: "Adding the book to library",
+          success: "Book added to library Successfully",
+          error: "Something went wrong",
+        },
+      );
+    } else {
+      setEditDialogOpen(true);
+    }
+  }
+
+  async function shareLink() {
+    const sharedById = await getSharedById();
+    const url = `${window.location.href}?mode=share${sharedById ? "&sharedBy=" + sharedById : ""}`;
+    navigator.clipboard.writeText(url);
+    toast.info("Link Copied");
   }
 
   return (
     <div className="max-w-4xl mx-auto">
-      <div className="absolute w-[calc(100%-0.5rem)] -z-10 left-2 right-2 top-[35%] lg:top-[35%] bg-(--background-secondary) h-screen"></div>
+      <div className="absolute w-[calc(100%-0.5rem)] -z-10 left-2 right-2 top-[35%] lg:top-[35%] bg-(--background-secondary) h-full"></div>
       {/* Back navigation */}
       <motion.div
         className="mb-8 md:mb-10"
@@ -357,11 +381,11 @@ export default function BookDetailPage({
             {/* Primary CTA */}
             <button
               className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-foreground text-background text-sm font-medium hover:bg-foreground/90 transition-all duration-200 active:scale-95"
-              onClick={
-                mode === "store" ? performAction : () => setEditDialogOpen(true)
-              }
+              onClick={performAction}
             >
-              {mode === "store" ? "Add to Library" : "Update Details"}
+              {!mode || mode === "library"
+                ? "Update Details"
+                : "Add to Library"}
               <ArrowUpRight size={14} />
             </button>
 
@@ -374,8 +398,9 @@ export default function BookDetailPage({
             </button>
             {mode !== "store" ? (
               <button
-                className="w-10 h-10 rounded-full border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:border-foreground/20 transition-all duration-200 active:scale-95"
+                className="w-10 h-10 rounded-full border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:border-foreground/20 transition-all duration-200 active:scale-95 cursor-pointer"
                 title="Share"
+                onClick={shareLink}
               >
                 <Share2 size={16} />
               </button>

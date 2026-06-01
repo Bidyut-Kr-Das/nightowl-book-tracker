@@ -18,9 +18,11 @@ import {
   Pause,
   Home,
   Search,
+  PlusIcon,
 } from "lucide-react";
 import Image from "next/image";
 import { useBookStore } from "@/store/book.store";
+import BookFormDialog from "@/components/book-form-dialog/book-form-dialog";
 
 const navItems = [
   { href: "/dashboard", label: "All Books", icon: Library },
@@ -47,6 +49,7 @@ export default function DashboardLayout({
   const { theme, toggleTheme } = useTheme();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { getAllLibraryBooks, books } = useBookStore();
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
 
   // Close sidebar on route change (mobile)
   useEffect(() => {
@@ -191,6 +194,18 @@ export default function DashboardLayout({
         </nav>
 
         {/* Bottom actions */}
+        <div className="w-full p-4">
+          <button
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm
+              transition-all duration-200 active:scale-[0.98] bg-primary/10 text-primary font-medium cursor-pointer hover:text-foreground hover:bg-accent"
+            onClick={() => {
+              setEditDialogOpen((prev) => !prev);
+            }}
+          >
+            <PlusIcon />
+            Create Book
+          </button>
+        </div>
         <div className="p-4 border-t border-sidebar-border">
           <button
             onClick={toggleTheme}
@@ -237,6 +252,15 @@ export default function DashboardLayout({
           {children}
         </main>
       </div>
+      <BookFormDialog
+        mode="create"
+        // book={book}
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        onSubmit={(data) => {
+          console.log(data);
+        }}
+      />
     </div>
   );
 }

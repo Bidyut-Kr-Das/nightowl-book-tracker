@@ -7,14 +7,15 @@ import {
   MailIcon,
   Moon,
   PencilIcon,
+  PlusIcon,
   Search,
   Sun,
 } from "lucide-react";
 import Link from "next/link";
-import React from "react";
+import React, { useState } from "react";
 
 // import { ModeToggle } from "@/components/mode-toggle";
-import { buttonVariants } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import {
   Tooltip,
@@ -26,6 +27,7 @@ import { cn } from "@/lib/utils";
 import { Dock, DockIcon } from "@/components/ui/dock";
 import { UserButton } from "@clerk/nextjs";
 import { useTheme } from "@/lib/theme-provider";
+import BookFormDialog from "./book-form-dialog/book-form-dialog";
 
 export type IconProps = React.HTMLAttributes<SVGElement>;
 
@@ -38,13 +40,14 @@ const DATA = {
 
 export function MobileDock() {
   const { theme, toggleTheme } = useTheme();
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
 
   return (
     <div className="absolute bottom-5 left-0 right-0 lg:hidden">
       <TooltipProvider>
         <Dock
           direction="middle"
-          className="bg-blend-color-burn bg-accent rounded-md"
+          className="bg-blend-color-burn bg-accent rounded-full"
         >
           {DATA.navbar.map((item) => (
             <DockIcon key={item.label}>
@@ -67,6 +70,23 @@ export function MobileDock() {
               </Tooltip>
             </DockIcon>
           ))}
+          <DockIcon>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  className="bg-transparent flex items-center gap-3   rounded-xl text-sm  hover:text-foreground hover:bg-accent transition-all duration-200 active:scale-[0.98]"
+                  onClick={() => {
+                    setEditDialogOpen((prev) => !prev);
+                  }}
+                >
+                  <PlusIcon />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Create</p>
+              </TooltipContent>
+            </Tooltip>
+          </DockIcon>
 
           <Separator orientation="vertical" className="h-full py-2" />
           <DockIcon>
@@ -106,6 +126,15 @@ export function MobileDock() {
           </DockIcon>
         </Dock>
       </TooltipProvider>
+      <BookFormDialog
+        mode="create"
+        // book={book}
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        onSubmit={(data) => {
+          console.log(data);
+        }}
+      />
     </div>
   );
 }
