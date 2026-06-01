@@ -66,6 +66,7 @@ type BookActions = {
   getAllSeries: () => Promise<void>;
 
   createOrUpdateBook: (data: BookFormData) => Promise<void>;
+  clearStateField: (field: keyof BookState) => void;
 };
 
 type BookStore = BookState & BookActions;
@@ -234,6 +235,12 @@ export const useBookStore = create<BookStore>((set) => ({
     set({
       series: Array.from(seriesMap.values()),
     });
+  },
+  clearStateField: (field) => {
+    set((state) => ({
+      ...state,
+      [field]: initialState[field],
+    }));
   },
 
   getBooksByStatus: (status: ReadingStatus) => {},

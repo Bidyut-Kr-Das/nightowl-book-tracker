@@ -86,8 +86,14 @@ export default function BookDetailPage({
   const router = useRouter();
   const [localLoading, setLocalLoading] = useState(true);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const { books, relevant_books, addBookToLibrary, getSharedBook, sharedBook } =
-    useBookStore();
+  const {
+    books,
+    relevant_books,
+    addBookToLibrary,
+    getSharedBook,
+    sharedBook,
+    clearStateField,
+  } = useBookStore();
 
   useEffect(() => {
     if (mode === "share") {
@@ -98,6 +104,10 @@ export default function BookDetailPage({
     } else {
       setLocalLoading(false);
     }
+
+    return () => {
+      clearStateField("sharedBook");
+    };
   }, [mode]);
 
   const alreadyPresentInLibraryFlag = books.find(
