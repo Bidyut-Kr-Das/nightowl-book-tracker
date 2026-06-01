@@ -31,6 +31,7 @@ import { format } from "date-fns";
 import { BookDetailsLoading } from "./_components/book-details-loading";
 import BookFormDialog from "@/components/book-form-dialog/book-form-dialog";
 import { getSharedById } from "@/server/book.action";
+import { Button } from "@/components/ui/button";
 
 const statusDescriptions: Record<string, string> = {
   reading: "You're currently making your way through this one.",
@@ -98,6 +99,10 @@ export default function BookDetailPage({
       setLocalLoading(false);
     }
   }, [mode]);
+
+  const alreadyPresentInLibraryFlag = books.find(
+    (b) => b.slug === sharedBook?.slug,
+  );
 
   // Spring tilt for cover — decorative mouse tracking
   const rotateY = useSpring(0, { stiffness: 120, damping: 18 });
@@ -379,15 +384,18 @@ export default function BookDetailPage({
             transition={{ delay: 0.4, duration: 0.4, ease: [0.23, 1, 0.32, 1] }}
           >
             {/* Primary CTA */}
-            <button
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-foreground text-background text-sm font-medium hover:bg-foreground/90 transition-all duration-200 active:scale-95"
+            <Button
+              className="inline-flex items-center gap-2 px-5 py-5 rounded-full bg-foreground text-background text-sm font-medium hover:bg-foreground/90 transition-all duration-200 active:scale-95 disabled:cursor-not-allowed"
               onClick={performAction}
+              disabled={!!alreadyPresentInLibraryFlag}
             >
               {!mode || mode === "library"
                 ? "Update Details"
-                : "Add to Library"}
+                : !alreadyPresentInLibraryFlag
+                  ? "Add to Library"
+                  : "Book Present in Library"}
               <ArrowUpRight size={14} />
-            </button>
+            </Button>
 
             {/* Icon actions */}
             <button

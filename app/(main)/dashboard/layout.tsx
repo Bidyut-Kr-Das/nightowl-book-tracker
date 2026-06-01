@@ -23,6 +23,7 @@ import {
 import Image from "next/image";
 import { useBookStore } from "@/store/book.store";
 import BookFormDialog from "@/components/book-form-dialog/book-form-dialog";
+import { UserButton } from "@clerk/nextjs";
 
 const navItems = [
   { href: "/dashboard", label: "All Books", icon: Library },
@@ -229,13 +230,13 @@ export default function DashboardLayout({
       {/* Main content */}
       <div className="flex-1 flex flex-col h-screen overflow-auto min-w-0">
         {/* Mobile top bar */}
-        <header className="sticky top-0 z-30 flex items-center gap-3 px-4 h-14 bg-background/80 backdrop-blur-xl border-b border-border lg:hidden py-4">
-          <button
+        <header className="sticky top-0 z-30 flex items-center gap-3 px-4 h-14 bg-background/80 backdrop-blur-xl border-b border-border lg:hidden py-4 justify-between">
+          {/* <button
             onClick={() => setSidebarOpen(true)}
             className="w-9 h-9 rounded-xl lg:flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent transition-colors active:scale-95 hidden"
           >
             <Menu size={20} />
-          </button>
+          </button> */}
           <span className="text-lg flex gap-4 font-semibold font-(family-name:--font-dynapuff) tracking-tight">
             <Image
               src={"/android-chrome-512x512.png"}
@@ -245,6 +246,7 @@ export default function DashboardLayout({
             />
             NightOwl
           </span>
+          <UserButton />
         </header>
 
         {/* Page content */}

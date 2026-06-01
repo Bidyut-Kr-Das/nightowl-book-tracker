@@ -171,6 +171,7 @@ export const useBookStore = create<BookStore>((set) => ({
   getSharedBook: async ({ slug, userId }) => {
     set({ loading: true });
     const res = await getBookBySlugAction(slug, userId);
+    // console.log(res)
     set({
       sharedBook: res ?? null,
       loading: false,

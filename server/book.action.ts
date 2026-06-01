@@ -257,7 +257,7 @@ export async function addBookToLibraryAction({
         ? ids.map((i) => ({
             id: i,
             hardcoverId: null as number | null,
-            bookImage: null,
+            bookImage: null as string | null,
           }))
         : [];
     //step 1: CHECK OUR DB IF THE BOOK IS AVAILABLE BASED ON HARDCOVER ID
@@ -367,7 +367,7 @@ export async function addBookToLibraryAction({
           return prisma.userBook.findUnique({
             where: {
               userId_bookId: {
-                userId: user as unknown as number,
+                userId: user[0] as unknown as number,
                 bookId: item.id,
               },
               bookImage: {
@@ -383,12 +383,12 @@ export async function addBookToLibraryAction({
       );
       final_list.forEach((item) => {
         const matched = coverImageList.find((i) => i?.bookId === item.id);
-        return {
-          ...item,
-          BookImage: matched ? matched.bookImage : null,
-        };
+        // console.log(matched);
+        item.bookImage = matched ? matched.bookImage : null;
       });
     }
+
+    // console.log(final_list);
 
     //create userbook entries for each new book connection
     const res = await prisma.userBook.createManyAndReturn({
@@ -441,6 +441,7 @@ export async function addBookToLibraryAction({
 }
 
 export async function getBookBySlugAction(slug: string, userId?: string) {
+  console.log(slug, userId);
   try {
     const res = await prisma.book.findUnique({
       where: {
@@ -466,27 +467,32 @@ export async function getBookBySlugAction(slug: string, userId?: string) {
 
     if (userId && res) {
       const user = hashids.decode(userId);
-      const coverImage = await prisma.userBook.findUnique({
-        where: {
-          userId_bookId: {
-            userId: user as unknown as number,
-            bookId: res.id,
+      if (user.length) {
+        const coverImage = await prisma.userBook.findUnique({
+          where: {
+            userId_bookId: {
+              userId: user[0] as unknown as number,
+              bookId: res.id,
+            },
           },
-        },
-        select: {
-          bookImage: true,
-        },
-      });
-      if (coverImage) res.coverImage = coverImage.bookImage;
+          select: {
+            bookImage: true,
+          },
+        });
+        if (coverImage) res.coverImage = coverImage.bookImage;
+      }
     }
 
+    console.log(res);
     return {
       ...res,
       addedAt: new Date(),
       progress: null,
       status: ReadingStatus.WANT_TO_READ,
     } as IBook;
-  } catch (error) {}
+  } catch (error) {
+    console.error(error);
+  }
 }
 
 export async function createUpdateBookAction(data: BookFormData) {
