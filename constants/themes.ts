@@ -12,6 +12,7 @@ export const THEMES = [
   "blue",
   "indigo",
   "violet",
+  "lavender",
   "purple",
   "fuchsia",
   "pink",

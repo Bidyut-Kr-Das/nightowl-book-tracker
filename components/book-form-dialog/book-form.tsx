@@ -228,8 +228,8 @@ export default function BookForm({
           {/* </div> */}
 
           <div className="flex-1 overflow-y-auto px-5 sm:px-7 py-6">
-            <TabsContent value="basic" className="mt-0">
-              <div className="flex flex-col md:flex-row gap-6 md:gap-8">
+            <TabsContent value="basic" className="mt-0 ">
+              <div className="flex flex-col md:flex-row gap-6 md:gap-8 ">
                 <div className="shrink-0 flex flex-col items-center md:items-start">
                   <CoverImageUpload
                     imageUrl={formData.coverImage}
@@ -303,7 +303,7 @@ export default function BookForm({
                         updateField("status", val as ReadingStatus)
                       }
                     >
-                      <SelectTrigger id="book-status" className="w-full bg-secondary-background border-2 border-border min-h-10.5 rounded-base">
+                      <SelectTrigger id="book-status" className="w-full bg-secondary-background border-2 border-border min-h-10.5 rounded-base text-foreground">
                         <SelectValue placeholder="Select status" />
                       </SelectTrigger>
                       <SelectContent className="bg-secondary-background">
@@ -311,7 +311,7 @@ export default function BookForm({
                           <SelectItem
                             key={status}
                             value={status}
-                            className="rounded-base"
+                            className="rounded-base text-foreground"
                           >
                             <span className="flex items-center gap-2">
                               <span
@@ -331,7 +331,7 @@ export default function BookForm({
               </div>
             </TabsContent>
 
-            <TabsContent value="advanced" className="mt-0 overflow-auto">
+            <TabsContent value="advanced" className="mt-0 overflow-auto px-1">
               <div className="space-y-5">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                   <FieldWrapper label="Subtitle" htmlFor="book-subtitle">

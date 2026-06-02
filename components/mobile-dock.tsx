@@ -45,7 +45,7 @@ export function MobileDock() {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
 
   return (
-    <div className="absolute bottom-5 left-0 right-0 lg:hidden">
+    <div className="absolute bottom-5 left-0 right-0 lg:hidden text-black">
       <TooltipProvider>
         <Dock
           direction="middle"

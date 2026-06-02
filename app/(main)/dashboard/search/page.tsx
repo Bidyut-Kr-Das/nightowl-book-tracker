@@ -110,11 +110,11 @@ function GroupToggle({
       onClick={onClick}
       className={`
         flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-medium
-        transition-all duration-200 active:scale-[0.97] bg-main border-border
+        transition-all duration-200 active:scale-[0.97] bg-main border-border text-black
         ${
           active
-            ? " text-foreground border border-primary/20 translate-x-boxShadowX translate-y-boxShadowY"
-            : " text-foreground shadow-shadow hover:translate-x-boxShadowX hover:translate-y-boxShadowY hover:shadow-none border border-border hover:text-foreground"
+            ? "  border border-primary/20 translate-x-boxShadowX translate-y-boxShadowY"
+            : "  shadow-shadow border border-border hover:text-foreground"
         }
       `}
     >
@@ -148,7 +148,7 @@ function ModeToggle({
             className={`
               relative flex items-center w-full justify-center gap-2 px-4 py-2 rounded-xl text-sm font-medium
               transition-colors duration-200 active:scale-[0.97]
-              ${isActive ? "text-foreground border-2 border-border" : "text-muted-foreground hover:text-foreground"}
+              ${isActive ? "text-black border-2 border-border" : "text-muted-foreground hover:text-foreground"}
             `}
           >
             {isActive && (
@@ -581,6 +581,7 @@ function GroupedShelves({
     const map = new Map<string, IBook[]>();
 
     books.forEach((book) => {
+      // book.indexInSeries
       if (groupBy === "author") {
         book.authors.forEach((author) => {
           const key = typeof author === "string" ? author : author.name;
@@ -588,16 +589,37 @@ function GroupedShelves({
           map.get(key)!.push(book);
         });
       } else {
-        // Group by series — books without a series go into "Standalone"
-        let key = "Standalone";
-        if (book.series && Array.isArray(book.series)) {
-          book.series.forEach((s) => {
-            key = typeof s === "string" ? s : s.name;
-          });
-        }
+        if (
+          book.series &&
+          Array.isArray(book.series) &&
+          book.series.length > 0
+        ) {
+          book.series.forEach((series) => {
+            const key = typeof series === "string" ? series : series.name;
 
-        if (!map.has(key)) map.set(key, []);
-        map.get(key)!.push(book);
+            if (!map.has(key)) map.set(key, []);
+            map.get(key)!.push(book);
+          });
+        } else {
+          // Standalone books
+          if (!map.has("Standalone")) map.set("Standalone", []);
+          map.get("Standalone")!.push(book);
+        }
+      }
+    });
+
+    map.forEach((groupBooks) => {
+      if (groupBy === "series") {
+        groupBooks.sort((a, b) => {
+          const aIndex = a.indexInSeries ?? 0;
+          const bIndex = b.indexInSeries ?? 0;
+
+          // Put 0 at the end
+          if (aIndex === 0 && bIndex !== 0) return 1;
+          if (bIndex === 0 && aIndex !== 0) return -1;
+
+          return aIndex - bIndex;
+        });
       }
     });
 
@@ -605,6 +627,7 @@ function GroupedShelves({
     return Array.from(map.entries()).sort(([a], [b]) => {
       if (a === "Standalone") return 1;
       if (b === "Standalone") return -1;
+
       return a.localeCompare(b);
     });
   }, [books, groupBy]);
@@ -793,7 +816,7 @@ export default function SearchPage() {
   );
 
   // ── Debounced query via hook ──
-  const debouncedQuery = useDebounce(query, 550);
+  const debouncedQuery = useDebounce(query, 750);
 
   // ── Sync search state to URL params (lightweight, no re-render) ──
   useEffect(() => {
@@ -1005,10 +1028,11 @@ export default function SearchPage() {
             <input
               ref={inputRef}
               type="text"
+              id="search-field"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder={searchPlaceholder}
-              className="flex-1 bg-transparent text-base md:text-lg outline-none placeholder:text-muted-foreground/40 font-(family-name:--font-body)"
+              className="flex-1 bg-transparent text-base md:text-lg outline-none text-black font-sans"
             />
             <AnimatePresence>
               {query && (

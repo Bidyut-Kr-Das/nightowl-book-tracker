@@ -434,6 +434,8 @@ export async function addBookToLibraryAction({
       };
     });
 
+    await redis.del(REDIS_KEYS.AUTHORS_ALL, REDIS_KEYS.SERIES_ALL);
+
     return normalised;
   } catch (error) {
     console.error("Error While fetching books by id", error);

@@ -1,9 +1,16 @@
 "use client";
 
-import { useState, useRef, useCallback, useEffect, type KeyboardEvent } from "react";
+import {
+  useState,
+  useRef,
+  useCallback,
+  useEffect,
+  type KeyboardEvent,
+} from "react";
 import { Popover } from "radix-ui";
 import { Search, X, Plus, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Badge } from "../neo-brutalism/badge";
 
 /* ═══════════════════════════════════════════════
    MultiSelectPills — Searchable pill selector
@@ -47,9 +54,7 @@ export default function MultiSelectPills<T>({
   const filtered = options.filter((opt) => {
     if (selectedKeys.has(getKey(opt))) return false;
     if (!search.trim()) return true;
-    return getDisplayValue(opt)
-      .toLowerCase()
-      .includes(search.toLowerCase());
+    return getDisplayValue(opt).toLowerCase().includes(search.toLowerCase());
   });
 
   useEffect(() => {
@@ -83,14 +88,10 @@ export default function MultiSelectPills<T>({
   function handleKeyDown(e: KeyboardEvent<HTMLInputElement>) {
     if (e.key === "ArrowDown") {
       e.preventDefault();
-      setHighlightIndex((prev) =>
-        prev < filtered.length - 1 ? prev + 1 : 0,
-      );
+      setHighlightIndex((prev) => (prev < filtered.length - 1 ? prev + 1 : 0));
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
-      setHighlightIndex((prev) =>
-        prev > 0 ? prev - 1 : filtered.length - 1,
-      );
+      setHighlightIndex((prev) => (prev > 0 ? prev - 1 : filtered.length - 1));
     } else if (e.key === "Enter" && filtered.length > 0) {
       e.preventDefault();
       selectItem(filtered[highlightIndex]);
@@ -136,11 +137,11 @@ export default function MultiSelectPills<T>({
           {selected.map((item) => {
             const key = getKey(item);
             return (
-              <span
+              <Badge
                 key={key}
                 className={cn(
                   "inline-flex items-center gap-1 pl-2.5 pr-1 py-1 rounded-full",
-                  "bg-secondary text-xs text-secondary-foreground font-medium",
+                  " text-xs  font-medium",
                   "transition-all duration-150",
                 )}
               >
@@ -150,15 +151,15 @@ export default function MultiSelectPills<T>({
                     e.stopPropagation();
                     removeItem(key);
                   }}
-                  className="inline-flex items-center justify-center w-4 h-4 rounded-full hover:bg-foreground/10 text-muted-foreground/60 hover:text-foreground transition-colors duration-150 cursor-pointer"
+                  className="inline-flex items-center justify-center w-4 h-4 rounded-full hover:bg-foreground/10  hover:text-foreground transition-colors duration-150 cursor-pointer"
                   aria-label={`Remove ${getDisplayValue(item)}`}
                 >
                   <X size={10} />
                 </span>
-              </span>
+              </Badge>
             );
           })}
-<ChevronsUpDown
+          <ChevronsUpDown
             size={14}
             className="ml-auto shrink-0 text-muted-foreground/40"
           />

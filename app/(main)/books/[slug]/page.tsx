@@ -314,7 +314,7 @@ export default function BookDetailPage({
         {/* Title + meta — editorial style */}
         <div className="flex-1 min-w-0 flex flex-col justify-center">
           {/* Series badge */}
-          {book.series && book.series.length > 0 && (
+          {book.series !== null && book.series.length > 0 && (
             <motion.div
               className="mb-3 flex gap-1"
               initial={{ opacity: 0 }}
@@ -326,7 +326,7 @@ export default function BookDetailPage({
                 {book.series[0].name}
                 {/* {book.seriesOrder && ` · Book ${book.seriesOrder}`} */}
               </span>
-              {book.indexInSeries && book.indexInSeries > 0 && (
+              {book.indexInSeries !== null && book.indexInSeries > 0 && (
                 <>
                   <Dot />
                   <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground uppercase tracking-wider font-medium">
@@ -339,7 +339,7 @@ export default function BookDetailPage({
 
           {/* Title — large editorial type */}
           <motion.h1
-            className="text-3xl md:text-4xl lg:text-[2.75rem] font-bold tracking-tight leading-[1.1] font-(family-name:--font-display)"
+            className="text-3xl md:text-4xl lg:text-[2.75rem] font-bold tracking-tight leading-[1.1] "
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{

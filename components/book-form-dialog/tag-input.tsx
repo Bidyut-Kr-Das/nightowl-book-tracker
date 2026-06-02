@@ -102,7 +102,7 @@ export default function TagInput({
           if (input.trim()) addTag(input);
         }}
         placeholder={value.length === 0 ? placeholder : ""}
-        className="flex-1 min-w-[100px] bg-transparent text-sm outline-none placeholder:text-muted-foreground/40"
+        className="flex-1 min-w-25 bg-transparent text-sm outline-none placeholder:text-muted-foreground/40"
       />
     </div>
   );
