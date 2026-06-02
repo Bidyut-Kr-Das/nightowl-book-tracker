@@ -13,6 +13,7 @@ import {
   Bookmark,
   Calendar,
   Clock,
+  Delete,
   Dot,
   Download,
   ExternalLink,
@@ -23,6 +24,8 @@ import {
   SeparatorVerticalIcon,
   Share2,
   Star,
+  Trash2Icon,
+  TrashIcon,
 } from "lucide-react";
 // import { getBookById, books, type Book } from "@/lib/books-data";
 import { useTheme } from "@/lib/theme-provider";
@@ -35,6 +38,8 @@ import { BookDetailsLoading } from "./_components/book-details-loading";
 import BookFormDialog from "@/components/book-form-dialog/book-form-dialog";
 import { getSharedById } from "@/server/book.action";
 import { Button } from "@/components/neo-brutalism/button";
+import DeleteBookButton from "@/components/delete-book-button";
+import { Badge } from "@/components/neo-brutalism/badge";
 // import { Button } from "@/components/ui/button";
 
 const statusDescriptions: Record<string, string> = {
@@ -442,6 +447,17 @@ export default function BookDetailPage({
                 <Share2 size={16} />
               </button>
             )}
+            {(!mode || mode === "library") && (
+              <DeleteBookButton item={book}>
+                <Button
+                  className="w-10 theme-red h-10 rounded-full border-2 border-border flex items-center justify-center  cursor-pointer"
+                  title="Delete"
+                  // onClick={shareLink}
+                >
+                  <Trash2Icon size={16} />
+                </Button>
+              </DeleteBookButton>
+            )}
           </motion.div>
         </div>
       </div>
@@ -511,13 +527,13 @@ export default function BookDetailPage({
           {/* Genres */}
           <div className="flex flex-wrap gap-2 mt-6">
             {book.genres.map((g) => (
-              <span
+              <Badge
                 key={g}
-                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-muted mix-blend-multiply dark:mix-blend-exclusion text-xs text-muted-foreground font-medium"
+                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full  text-xs  font-medium"
               >
                 <Hash size={10} />
                 {g}
-              </span>
+              </Badge>
             ))}
           </div>
         </div>

@@ -5,6 +5,7 @@ import { ReadingStatus } from "@/lib/generated/prisma/enums";
 import {
   addBookToLibraryAction,
   createUpdateBookAction,
+  deleteUserBookAction,
   getAllAuthorsAction,
   // createUpdateBookAction,
   getAllBooks,
@@ -58,6 +59,7 @@ type BookActions = {
     ids?: number[];
     userId?: string;
   }) => Promise<void>;
+  deleteBook: (params: { bookId: number }) => Promise<void>;
 
   getSharedBook: (params: { slug: string; userId?: string }) => Promise<void>;
 
@@ -241,6 +243,27 @@ export const useBookStore = create<BookStore>((set) => ({
       ...state,
       [field]: initialState[field],
     }));
+  },
+
+  deleteBook: async ({ bookId }) => {
+    const res = await deleteUserBookAction(bookId);
+    if (!res) {
+      return;
+    }
+    set((state) => {
+      const deletedBookIndex = state.books.findIndex(
+        (b) => b.id === res.bookId,
+      );
+      const allBooks = state.books.filter((b, index) => {
+        if (index !== deletedBookIndex) {
+          return b;
+        }
+      });
+      return {
+        ...state,
+        books: allBooks,
+      };
+    });
   },
 
   getBooksByStatus: (status: ReadingStatus) => {},

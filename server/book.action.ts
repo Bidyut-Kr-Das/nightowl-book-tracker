@@ -24,6 +24,7 @@ import { mapBooksResponse } from "@/utils/bookUtils";
 import { currentUser } from "@clerk/nextjs/server";
 import { gql } from "graphql-request";
 import { BookImage } from "lucide-react";
+import { deleteImageFromImagekit } from "./image.action";
 
 export async function getAllBooks() {
   try {
@@ -258,6 +259,7 @@ export async function addBookToLibraryAction({
             id: i,
             hardcoverId: null as number | null,
             bookImage: null as string | null,
+            bookImageId: null as string | null,
           }))
         : [];
     //step 1: CHECK OUR DB IF THE BOOK IS AVAILABLE BASED ON HARDCOVER ID
@@ -280,7 +282,7 @@ export async function addBookToLibraryAction({
       for (const book of db_books) {
         if (book.hardcoverId) uniqueSets.delete(book.hardcoverId);
         //push to final list for tracking
-        final_list.push({ ...book, bookImage: null });
+        final_list.push({ ...book, bookImage: null, bookImageId: null });
       }
 
       //if there is no new books to fetch dont call the hardcover api
@@ -354,6 +356,7 @@ export async function addBookToLibraryAction({
             ...createdBooks.map((cb) => ({
               ...cb,
               bookImage: null,
+              bookImageId: null,
             })),
           ];
         }
@@ -377,6 +380,7 @@ export async function addBookToLibraryAction({
             select: {
               bookId: true,
               bookImage: true,
+              bookImageId: true,
             },
           });
         }),
@@ -385,6 +389,7 @@ export async function addBookToLibraryAction({
         const matched = coverImageList.find((i) => i?.bookId === item.id);
         // console.log(matched);
         item.bookImage = matched ? matched.bookImage : null;
+        item.bookImageId = matched ? matched.bookImageId : null;
       });
     }
 
@@ -398,6 +403,7 @@ export async function addBookToLibraryAction({
           bookId: e.id,
           status: ReadingStatus.WISHLIST,
           bookImage: e.bookImage,
+          bookImageId: e.bookImageId,
         };
       }),
       include: {
@@ -434,6 +440,7 @@ export async function addBookToLibraryAction({
       };
     });
 
+    //INVALIDATE CACHE
     await redis.del(REDIS_KEYS.AUTHORS_ALL, REDIS_KEYS.SERIES_ALL);
 
     return normalised;
@@ -760,6 +767,53 @@ export async function getSharedById() {
     const sharedBy = hashids.encode(Number(user.externalId));
 
     return sharedBy;
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+export async function deleteUserBookAction(bookId: number) {
+  try {
+    const user = await currentUser();
+    if (!user) {
+      throw new Error("User not authenticated");
+    }
+    const userId = Number(user.externalId);
+
+    const book = await prisma.userBook.findUnique({
+      where: {
+        userId_bookId: {
+          userId,
+          bookId,
+        },
+      },
+      select: {
+        id: true,
+        userId: true,
+        bookImage: true,
+        bookImageId: true,
+      },
+    });
+    if (book?.bookImageId) {
+      const booksWithSameImage = await prisma.userBook.findMany({
+        where: {
+          bookImageId: book.bookImageId,
+        },
+      });
+      if (booksWithSameImage.length === 1) {
+        await deleteImageFromImagekit(book.bookImageId);
+      }
+    }
+
+    const res = await prisma.userBook.delete({
+      where: {
+        userId_bookId: {
+          userId: userId,
+          bookId: bookId,
+        },
+      },
+    });
+    return res;
   } catch (error) {
     console.error(error);
   }
