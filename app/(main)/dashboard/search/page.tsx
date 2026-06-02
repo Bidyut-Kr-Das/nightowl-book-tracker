@@ -110,11 +110,11 @@ function GroupToggle({
       onClick={onClick}
       className={`
         flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-medium
-        transition-all duration-200 active:scale-[0.97]
+        transition-all duration-200 active:scale-[0.97] bg-main border-border
         ${
           active
-            ? "bg-primary/12 text-primary border border-primary/20"
-            : "bg-muted/50 text-muted-foreground border border-border hover:text-foreground hover:bg-muted/80"
+            ? " text-foreground border border-primary/20 translate-x-boxShadowX translate-y-boxShadowY"
+            : " text-foreground shadow-shadow hover:translate-x-boxShadowX hover:translate-y-boxShadowY hover:shadow-none border border-border hover:text-foreground"
         }
       `}
     >
@@ -135,7 +135,7 @@ function ModeToggle({
   onChange: (mode: SearchMode) => void;
 }) {
   return (
-    <div className="flex items-center justify-evenly gap-1 p-1 rounded-2xl bg-muted/60 border border-border">
+    <div className="flex items-center justify-evenly gap-1 p-1 rounded-2xl bg-background border-2 border-border">
       {(["library", "store"] as const).map((option) => {
         const isActive = mode === option;
         const Icon = option === "library" ? Library : Store;
@@ -148,13 +148,13 @@ function ModeToggle({
             className={`
               relative flex items-center w-full justify-center gap-2 px-4 py-2 rounded-xl text-sm font-medium
               transition-colors duration-200 active:scale-[0.97]
-              ${isActive ? "text-primary" : "text-muted-foreground hover:text-foreground"}
+              ${isActive ? "text-foreground border-2 border-border" : "text-muted-foreground hover:text-foreground"}
             `}
           >
             {isActive && (
               <motion.div
                 layoutId="mode-pill"
-                className="absolute inset-0 rounded-xl bg-primary/10 border border-primary/18"
+                className="absolute inset-0 rounded-xl bg-main text-foreground border border-primary/18"
                 transition={{
                   type: "spring",
                   duration: 0.35,
@@ -990,7 +990,7 @@ export default function SearchPage() {
           transition={{ delay: 0.08, duration: 0.4, ease: [0.23, 1, 0.32, 1] }}
         >
           <div
-            className="flex items-center gap-3 h-14 md:h-15 px-5 rounded-2xl transition-all duration-200 paper-card"
+            className="flex items-center gap-3 h-14 md:h-15 px-5 rounded-2xl transition-all duration-200 bg-white border-2 border-border"
             style={{
               boxShadow: query
                 ? "0 2px 16px rgba(0,0,0,0.06), 0 0 0 2px oklch(from var(--primary) l c h / 12%)"

@@ -4,19 +4,25 @@ import { useMemo } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { cn } from "@/lib/utils";
 
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogClose,
-} from "@/components/ui/dialog";
+// import {
+//   Dialog,
+//   DialogContent,
+//   DialogHeader,
+//   DialogTitle,
+//   DialogDescription,
+//   DialogClose,
+// } from "@/components/ui/dialog";
 
 import type { BookFormData, AuthorOption, SeriesOption } from "./types";
 import { emptyFormData } from "./types";
 import BookForm from "./book-form";
 import { IBook } from "@/types/interface";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+} from "../neo-brutalism/dialog";
 
 /* ═══════════════════════════════════════════════
    BookFormDialog — Reusable Create / Edit dialog
@@ -98,7 +104,7 @@ export default function BookFormDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={true} onOpenChange={onOpenChange}>
       <AnimatePresence>
         {open && (
           <DialogContent
@@ -106,11 +112,11 @@ export default function BookFormDialog({
               // Override shadcn defaults for our custom layout
               // "top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2",
               "max-w-4xl sm:max-w-4xl w-[calc(100vw-3rem)] max-h-[90vh] h-[80vh]",
-              "rounded-none md:rounded-xl",
-              "border-0 md:border border-border",
+              // "rounded-none md:rounded-xl",
+              // "border-0 md:border border-border",
               "p-0",
-              "shadow-[0_25px_60px_-12px_rgba(0,0,0,0.3),0_0_0_1px_rgba(0,0,0,0.05)]",
-              "dark:shadow-[0_25px_60px_-12px_rgba(0,0,0,0.6),0_0_80px_rgba(200,160,80,0.03)]",
+              // "shadow-[0_25px_60px_-12px_rgba(0,0,0,0.3),0_0_0_1px_rgba(0,0,0,0.05)]",
+              // "dark:shadow-[0_25px_60px_-12px_rgba(0,0,0,0.6),0_0_80px_rgba(200,160,80,0.03)]",
               "overflow-hidden",
             )}
             // showCloseButton={false}
@@ -131,12 +137,12 @@ export default function BookFormDialog({
                 className={cn(
                   "flex items-center justify-between",
                   "px-5 sm:px-7 py-4",
-                  "border-b border-border",
+                  "",
                   "shrink-0",
                 )}
               >
                 <div>
-                  <DialogTitle className="text-lg font-semibold tracking-tight font-(family-name:--font-display)">
+                  <DialogTitle className="text-lg font-sans font-semibold tracking-tight ">
                     {mode === "create" ? "Add a New Book" : "Edit Book Details"}
                   </DialogTitle>
                   <DialogDescription className="text-xs text-muted-foreground/60 mt-0.5">

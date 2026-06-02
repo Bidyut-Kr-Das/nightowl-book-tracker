@@ -13,11 +13,14 @@ import {
   Bookmark,
   Calendar,
   Clock,
+  Dot,
   Download,
   ExternalLink,
   Hash,
   Heart,
   Layers,
+  SeparatorVertical,
+  SeparatorVerticalIcon,
   Share2,
   Star,
 } from "lucide-react";
@@ -31,7 +34,8 @@ import { format } from "date-fns";
 import { BookDetailsLoading } from "./_components/book-details-loading";
 import BookFormDialog from "@/components/book-form-dialog/book-form-dialog";
 import { getSharedById } from "@/server/book.action";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/neo-brutalism/button";
+// import { Button } from "@/components/ui/button";
 
 const statusDescriptions: Record<string, string> = {
   reading: "You're currently making your way through this one.",
@@ -226,7 +230,7 @@ export default function BookDetailPage({
 
   return (
     <div className="max-w-4xl mx-auto">
-      <div className="absolute w-[calc(100%-0.5rem)] -z-10 left-2 right-2 top-[35%] lg:top-[35%] bg-(--background-secondary) h-full"></div>
+      <div className="absolute w-full -z-10 left-0 right-2 top-[35%] lg:top-[35%] bg-secondary-background h-full"></div>
       {/* Back navigation */}
       <motion.div
         className="mb-8 md:mb-10"
@@ -312,7 +316,7 @@ export default function BookDetailPage({
           {/* Series badge */}
           {book.series && book.series.length > 0 && (
             <motion.div
-              className="mb-3"
+              className="mb-3 flex gap-1"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.2 }}
@@ -322,6 +326,14 @@ export default function BookDetailPage({
                 {book.series[0].name}
                 {/* {book.seriesOrder && ` · Book ${book.seriesOrder}`} */}
               </span>
+              {book.indexInSeries && book.indexInSeries > 0 && (
+                <>
+                  <Dot />
+                  <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground uppercase tracking-wider font-medium">
+                    BOOK {book.indexInSeries}
+                  </span>
+                </>
+              )}
             </motion.div>
           )}
 
@@ -395,7 +407,7 @@ export default function BookDetailPage({
           >
             {/* Primary CTA */}
             <Button
-              className="inline-flex items-center gap-2 px-5 py-5 rounded-full bg-foreground text-background text-sm font-medium hover:bg-foreground/90 transition-all duration-200 active:scale-95 disabled:cursor-not-allowed"
+              className="inline-flex items-center gap-2 px-5 py-5 rounded-full cursor-pointer text-sm font-medium  transition-all duration-200 active:scale-95 disabled:cursor-not-allowed"
               onClick={performAction}
               disabled={!!alreadyPresentInLibraryFlag}
             >

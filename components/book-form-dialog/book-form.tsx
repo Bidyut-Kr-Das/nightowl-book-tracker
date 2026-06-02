@@ -7,23 +7,23 @@ import { useBookStore } from "@/store/book.store";
 import { format } from "date-fns";
 import { upload } from "@imagekit/next";
 
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+// import { Button } from "@/components/ui/button";
+// import { Input } from "@/components/ui/input";
+// import { Textarea } from "@/components/ui/textarea";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+// import {
+//   Select,
+//   SelectContent,
+//   SelectItem,
+//   SelectTrigger,
+//   SelectValue,
+// } from "@/components/ui/select";
+// import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
 import type {
   BookFormData,
@@ -44,6 +44,16 @@ import AuthorFormDialog from "./author-form-dialog";
 import SeriesFormDialog from "./series-form-dialog";
 import { getImageKitAuth } from "@/server/image.action";
 import { toast } from "sonner";
+import { Input } from "../neo-brutalism/input";
+import { Textarea } from "../neo-brutalism/textarea";
+import { Button } from "../neo-brutalism/button";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "../neo-brutalism/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../neo-brutalism/select";
 
 interface BookFormProps {
   mode: "create" | "edit";
@@ -199,19 +209,23 @@ export default function BookForm({
     <>
       <form
         onSubmit={handleSubmit}
-        className="flex flex-col h-full overflow-y-auto"
+        className="flex flex-col h-full overflow-y-auto font-sans"
       >
         <Tabs
           defaultValue="basic"
-          orientation="horizontal"
-          className="flex-1 flex flex-col overflow-hidden"
+          // orientation="horizontal"
+          className="flex-1 flex flex-col overflow-hidden "
         >
-          <div className="px-5 sm:px-7 pt-4 pb-0 border-b border-border shrink-0">
-            <TabsList variant="line" className="gap-6 bg-transparent p-0">
-              <TabsTrigger value="basic">Basic Info</TabsTrigger>
-              <TabsTrigger value="advanced">Advanced</TabsTrigger>
-            </TabsList>
-          </div>
+          {/* <div className="px-5 sm:px-7 pt-4 pb-0 border-b border-border shrink-0"> */}
+          <TabsList className=" bg-transparent mx-2 p-1 rounded-full">
+            <TabsTrigger className="w-full h-full font-sans rounded-full" value="basic">
+              Basic Info
+            </TabsTrigger>
+            <TabsTrigger value="advanced" className="w-full font-sans rounded-full">
+              Advanced
+            </TabsTrigger>
+          </TabsList>
+          {/* </div> */}
 
           <div className="flex-1 overflow-y-auto px-5 sm:px-7 py-6">
             <TabsContent value="basic" className="mt-0">
@@ -241,7 +255,7 @@ export default function BookForm({
                       onBlur={() => handleBlur("title")}
                       placeholder="Enter book title…"
                       className={cn(
-                        "w-full px-3.5 py-2.5 text-base font-medium font-(family-name:--font-display)",
+                        "w-full px-3.5 py-2.5 text-base font-medium ",
                         fieldError("title") &&
                           "border-destructive focus-visible:ring-destructive/30",
                       )}
@@ -289,15 +303,15 @@ export default function BookForm({
                         updateField("status", val as ReadingStatus)
                       }
                     >
-                      <SelectTrigger id="book-status" className="w-full">
+                      <SelectTrigger id="book-status" className="w-full bg-secondary-background border-2 border-border min-h-10.5 rounded-base">
                         <SelectValue placeholder="Select status" />
                       </SelectTrigger>
-                      <SelectContent className="px-2 py-1">
+                      <SelectContent className="bg-secondary-background">
                         {Object.values(ReadingStatus).map((status) => (
                           <SelectItem
                             key={status}
                             value={status}
-                            className="rounded-sm"
+                            className="rounded-base"
                           >
                             <span className="flex items-center gap-2">
                               <span
@@ -376,8 +390,8 @@ export default function BookForm({
                     <Popover>
                       <PopoverTrigger asChild>
                         <Button
-                          variant="outline"
-                          className="w-full justify-start text-left font-normal"
+                          variant="noShadow"
+                          className="w-full bg-secondary-background text-s justify-start text-left font-normal"
                         >
                           {formData.releaseDate
                             ? format(new Date(formData.releaseDate), "PPP")
@@ -535,7 +549,7 @@ export default function BookForm({
             "bg-popover/80 backdrop-blur-xl",
           )}
         >
-          <Button variant="outline" type="button" onClick={onCancel}>
+          <Button variant={"neutral"} type="button" onClick={onCancel}>
             Cancel
           </Button>
           <Button type="submit" disabled={submitting}>

@@ -2,11 +2,13 @@ import type { Metadata } from "next";
 import { Cormorant_Garamond, DynaPuff, Source_Sans_3 } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
-import { ThemeProvider } from "@/lib/theme-provider";
+// import { ThemeProvider } from "@/lib/theme-provider";
 import { ClerkProvider } from "@clerk/nextjs";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { MobileDock } from "@/components/mobile-dock";
-import { Toaster } from "sonner";
+// import { Toaster } from "sonner";
+import { ThemeProvider } from "@/components/theme-provider";
+import { Toaster } from "@/components/ui/sonner";
 
 const displayFont = Cormorant_Garamond({
   subsets: ["latin"],
@@ -46,7 +48,7 @@ export default function RootLayout({
       suppressHydrationWarning
       className={cn(
         "h-full antialiased",
-        displayFont.variable,
+        // displayFont.variable,
         bodyFont.variable,
         playfulFont.variable,
       )}
@@ -78,7 +80,7 @@ export default function RootLayout({
             <TooltipProvider>
               {children}
               <MobileDock />
-              <Toaster position="bottom-right" richColors />
+              <Toaster position="bottom-right" />
             </TooltipProvider>
           </ThemeProvider>
         </ClerkProvider>

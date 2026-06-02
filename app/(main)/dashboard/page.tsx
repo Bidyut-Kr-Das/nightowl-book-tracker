@@ -6,7 +6,7 @@ import Link from "next/link";
 import { motion, useMotionValue, useSpring, useTransform } from "motion/react";
 import { Search, X, ChevronRight } from "lucide-react";
 // import { books as allBooks } from "@/lib/books-data";
-import { useTheme } from "@/lib/theme-provider";
+// import { useTheme } from "@/lib/theme-provider";
 import {
   PhysicalShelf,
   ReadingProgressCard,
@@ -22,8 +22,6 @@ import { useBookStore } from "@/store/book.store";
    A warm bookshelf experience
    ════════════════════════════════ */
 export default function DashboardPage() {
-  const { setTheme } = useTheme();
-
   const { books: allBooks } = useBookStore();
 
   // useEffect(() => {

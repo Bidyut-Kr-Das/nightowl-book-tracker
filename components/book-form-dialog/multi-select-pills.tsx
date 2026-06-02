@@ -122,14 +122,14 @@ export default function MultiSelectPills<T>({
           type="button"
           className={cn(
             "flex flex-wrap items-center gap-1.5 w-full px-3 py-2 min-h-10.5 text-left",
-            "rounded-md border border-border",
-            "bg-input/50 transition-all duration-200",
+            "rounded-base border-2 border-border",
+            "bg-secondary-background transition-all duration-200",
             "hover:border-border/80",
             open && "border-ring ring-1 ring-ring/30",
           )}
         >
           {selected.length === 0 && (
-            <span className="text-sm text-muted-foreground/40">
+            <span className="text-sm text-foreground/60">
               Select {label.toLowerCase()}…
             </span>
           )}

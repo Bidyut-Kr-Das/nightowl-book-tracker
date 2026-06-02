@@ -9,6 +9,7 @@ import {
   PencilIcon,
   PlusIcon,
   Search,
+  Settings2,
   Sun,
 } from "lucide-react";
 import Link from "next/link";
@@ -26,8 +27,9 @@ import {
 import { cn } from "@/lib/utils";
 import { Dock, DockIcon } from "@/components/ui/dock";
 import { UserButton } from "@clerk/nextjs";
-import { useTheme } from "@/lib/theme-provider";
+// import { useTheme } from "@/lib/theme-provider";
 import BookFormDialog from "./book-form-dialog/book-form-dialog";
+import { useTheme } from "./theme-provider";
 
 export type IconProps = React.HTMLAttributes<SVGElement>;
 
@@ -39,7 +41,7 @@ const DATA = {
 };
 
 export function MobileDock() {
-  const { theme, toggleTheme } = useTheme();
+  const { theme, toggleMode, mode } = useTheme();
   const [editDialogOpen, setEditDialogOpen] = useState(false);
 
   return (
@@ -47,7 +49,7 @@ export function MobileDock() {
       <TooltipProvider>
         <Dock
           direction="middle"
-          className="bg-blend-color-burn bg-accent rounded-full"
+          className="bg-main border-2 rounded-full"
         >
           {DATA.navbar.map((item) => (
             <DockIcon key={item.label}>
@@ -89,14 +91,33 @@ export function MobileDock() {
           </DockIcon>
 
           <Separator orientation="vertical" className="h-full py-2" />
+           <DockIcon>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Link
+                  href={"/settings"}
+                  aria-label={"Settings"}
+                  className={cn(
+                    buttonVariants({ variant: "ghost", size: "icon" }),
+                    "size-12 rounded-full",
+                  )}
+                >
+                  <Settings2 className="size-4" />
+                </Link>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Settings</p>
+              </TooltipContent>
+            </Tooltip>
+          </DockIcon>
           <DockIcon>
             <Tooltip>
               <TooltipTrigger asChild>
                 <button
-                  onClick={toggleTheme}
+                  onClick={toggleMode}
                   className="flex items-center gap-3   rounded-xl text-sm  hover:text-foreground hover:bg-accent transition-all duration-200 active:scale-[0.98]"
                 >
-                  {theme === "dark" ? (
+                  {mode === "dark" ? (
                     <>
                       <Sun size={18} strokeWidth={1.8} />
                     </>
