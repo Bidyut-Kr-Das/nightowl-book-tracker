@@ -1,9 +1,18 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
+@font-face {
+  font-family: "BoldPixels";
+  src: url("/fonts/BoldPixels.ttf") format("truetype");
+  font-display: swap;
+}
+
+/* Define a CSS variable */
 
 @custom-variant dark (&:is(.dark, .dark *));
 
+:root {
+}
 /*
  * NightOwl Design System
  * ─────────────────────────────────────────
@@ -18,6 +27,7 @@
   --font-heading: var(--font-display);
   --font-sans: var(--font-body);
   --font-playful: var(--font-dynapuff);
+  --font-pixel: var(--font-boldpixels);
 
   /* Color tokens */
   --color-background: var(--background);
@@ -133,6 +143,8 @@
   --cocoa: oklch(0.5 0.06 50);
   --sage: oklch(0.62 0.08 145);
   --rose: oklch(0.72 0.08 15);
+
+  --font-boldpixels: "BoldPixels", sans-serif;
 }
 
 /* ═══════════════════════════════════════════════

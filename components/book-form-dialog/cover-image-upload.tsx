@@ -16,11 +16,13 @@ import { cn } from "@/lib/utils";
 interface CoverImageUploadProps {
   imageUrl: string | null;
   onImageChange: (file: File | null, previewUrl: string | null) => void;
+  className?: string;
 }
 
 export default function CoverImageUpload({
   imageUrl,
   onImageChange,
+  className,
 }: CoverImageUploadProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -116,6 +118,7 @@ export default function CoverImageUpload({
             "h-84 w-54 max-w-72 ",
             "rounded-lg border-2 border-dashed",
             "transition-all duration-200 cursor-pointer group",
+            className,
             isDragging
               ? "border-lamp bg-lamp/5 scale-[1.02]"
               : "border-border hover:border-muted-foreground/30 hover:bg-accent/30",
@@ -163,6 +166,7 @@ export default function CoverImageUpload({
               "rounded-md overflow-hidden",
               "book-shadow",
               "transition-transform duration-300",
+              className,
               isDragging && "scale-[1.02] ring-2 ring-lamp",
             )}
           >

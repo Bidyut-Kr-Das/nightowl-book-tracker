@@ -401,7 +401,7 @@ export async function addBookToLibraryAction({
         return {
           userId: Number(session.externalId),
           bookId: e.id,
-          status: ReadingStatus.WISHLIST,
+          status: ReadingStatus.WANT_TO_READ,
           bookImage: e.bookImage,
           bookImageId: e.bookImageId,
         };
@@ -662,7 +662,7 @@ export async function createUpdateBookAction(data: BookFormData) {
           create: {
             userId: Number(user.externalId),
             bookId: created_book.id,
-            status: status ?? ReadingStatus.WISHLIST,
+            status: status ?? ReadingStatus.WANT_TO_READ,
             bookImage: coverImage ?? null,
             bookImageId: fileId ?? null,
           },
@@ -679,7 +679,7 @@ export async function createUpdateBookAction(data: BookFormData) {
     const cover = "bookImage" in userBook ? userBook.bookImage : undefined;
     const progress = "progress" in userBook ? userBook.progress : null;
     const statusNew =
-      "status" in userBook ? userBook.status : ReadingStatus.WISHLIST;
+      "status" in userBook ? userBook.status : ReadingStatus.WANT_TO_READ;
 
     return {
       ...book,

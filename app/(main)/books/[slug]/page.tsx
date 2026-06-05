@@ -157,7 +157,7 @@ export default function BookDetailPage({
   if (!book) {
     return (
       <div className="max-w-3xl mx-auto py-24 text-center">
-        <h2 className="text-2xl font-semibold font-(family-name:--font-dynapuff) mb-2">
+        <h2 className="text-3xl font-semibold font-pixel mb-2">
           Book not found
         </h2>
         <p className="text-muted-foreground text-sm mb-8">
@@ -462,43 +462,6 @@ export default function BookDetailPage({
         </div>
       </div>
 
-      {/* Reading Progress — prominent for reading books */}
-      {/* {book.progress !== undefined && book.status === ReadingStatus.READING && (
-        <motion.div
-          className="mb-12 md:mb-16"
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.45, duration: 0.4, ease: [0.23, 1, 0.32, 1] }}
-        >
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-sm text-muted-foreground">
-              Reading progress
-            </span>
-            <span className="text-lg font-semibold font-(family-name:--font-dynapuff) text-primary">
-              {book.progress}%
-            </span>
-          </div>
-          <div className="h-2 rounded-full bg-muted overflow-hidden">
-            <motion.div
-              className="h-full rounded-full bg-primary"
-              initial={{ width: 0 }}
-              animate={{ width: `${book.progress}%` }}
-              transition={{
-                delay: 0.6,
-                duration: 1,
-                ease: [0.23, 1, 0.32, 1],
-              }}
-            />
-          </div>
-          <div className="flex justify-between text-xs text-muted-foreground mt-2">
-            <span>
-              Page {book.currentPage} of {book.totalPages}
-            </span>
-            {daysLeft && <span>~{daysLeft} days left</span>}
-          </div>
-        </motion.div>
-      )} */}
-
       {/* ═══ Divider ═══ */}
       <div className="border-t border-border mb-10 md:mb-14" />
 
@@ -511,7 +474,7 @@ export default function BookDetailPage({
       >
         {/* Description — larger column */}
         <div className="md:col-span-3">
-          <h2 className="text-lg font-semibold font-(family-name:--font-dynapuff) mb-4">
+          <h2 className="text-2xl font-semibold font-pixel mb-4">
             Description
           </h2>
           {book.description ? (
@@ -615,7 +578,7 @@ export default function BookDetailPage({
         animate={{ opacity: 1 }}
         transition={{ delay: 0.55, duration: 0.5 }}
       >
-        <h2 className="text-lg font-semibold font-(family-name:--font-dynapuff) mb-4">
+        <h2 className="text-xl font-semibold font-pixel mb-4">
           Notes & Highlights
         </h2>
         <div className="py-10 text-center border border-dashed border-border rounded-xl bg-(--background-secondary)">
@@ -637,7 +600,7 @@ export default function BookDetailPage({
           animate={{ opacity: 1 }}
           transition={{ delay: 0.6, duration: 0.5 }}
         >
-          <h2 className="text-lg font-semibold font-(family-name:--font-dynapuff) mb-4">
+          <h2 className="text-xl font-semibold font-pixel mb-4">
             You might also like
           </h2>
           <div className="divide-y divide-border">

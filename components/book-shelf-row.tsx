@@ -24,8 +24,6 @@ export function ShelfBook({
 }) {
   const searchMode = useContext(SearchModeContext);
   const ref = useRef<HTMLDivElement>(null);
-  const mouseX = useMotionValue(0);
-  const mouseY = useMotionValue(0);
 
   // Spring-based tilt — decorative, so spring is appropriate (per design-eng skill)
   const rotateY = useSpring(0, { stiffness: 150, damping: 20 });
@@ -105,6 +103,7 @@ export function ShelfBook({
                   "-8px 5px 8px rgba(0,0,0,0.5),-5px 12px 18px rgba(0,0,0,0.2), -3px 4px 10px rgba(0,0,0,0.1)",
               }}
               loading="eager"
+              draggable={false}
             />
             {/* Spine highlight — left edge */}
             <div
@@ -159,7 +158,7 @@ export function PhysicalShelf() {
     <div className="relative w-full mt-0">
       {/* Shelf surface */}
       <div
-        className="h-3 rounded-b-[5px] flex justify-end items-end pb-[2.5px] px-1.5"
+        className="h-3 rounded-b-base flex justify-end items-end pb-[2.5px] px-1.5"
         style={{
           background:
             "linear-gradient(to bottom, oklch(0.82 0.03 65), oklch(0.78 0.04 60))",
@@ -195,7 +194,33 @@ export function ShelfRow({
   bookSize?: "sm" | "md" | "lg";
   delay?: number;
 }) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const dragging = useRef(false);
+  const startX = useRef(0);
+  const startScrollLeft = useRef(0);
   if (books.length === 0) return null;
+
+  const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    const el = scrollRef.current;
+    if (!el) return;
+
+    dragging.current = true;
+    startX.current = e.clientX;
+    startScrollLeft.current = el.scrollLeft;
+
+    el.setPointerCapture(e.pointerId);
+  };
+
+  const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    const el = scrollRef.current;
+    if (!el || !dragging.current) return;
+
+    el.scrollLeft = startScrollLeft.current - (e.clientX - startX.current);
+  };
+
+  const onPointerUp = () => {
+    dragging.current = false;
+  };
 
   return (
     <motion.section
@@ -206,7 +231,7 @@ export function ShelfRow({
     >
       {/* Section header */}
       <div className="flex items-baseline justify-between mb-5">
-        <h2 className="text-xl md:text-2xl font-semibold tracking-tight font-(family-name:--font-dynapuff)">
+        <h2 className="text-2xl md:text-2xl font-semibold tracking-tight font-pixel">
           {title}
         </h2>
         <span className="text-xs text-muted-foreground">
@@ -218,6 +243,11 @@ export function ShelfRow({
       <div className="relative">
         {/* Outer wrapper: clips x for scroll, but padded so y has room */}
         <div
+          ref={scrollRef}
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={onPointerUp}
+          onPointerCancel={onPointerUp}
           className="overflow-x-auto scrollbar-none overflow-y-hidden "
           style={{
             scrollbarWidth: "none",
@@ -231,7 +261,7 @@ export function ShelfRow({
             style={{ paddingTop: "12px" }}
           >
             {books.map((book, i) => (
-              <ShelfBook key={book.id} book={book} index={i} size={bookSize} />
+              <ShelfBook key={i} book={book} index={i} size={bookSize} />
             ))}
           </div>
         </div>

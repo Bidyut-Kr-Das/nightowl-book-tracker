@@ -48,7 +48,7 @@ type StoreFilterType = "name" | "author" | "series";
 const STATUS_OPTIONS: { value: ReadingStatus; label: string }[] = [
   { value: ReadingStatus.READING, label: "Reading" },
   { value: ReadingStatus.COMPLETED, label: "Completed" },
-  { value: ReadingStatus.WISHLIST, label: "Wishlist" },
+  { value: ReadingStatus.WANT_TO_READ, label: "To Be Read" },
 ];
 
 const STORE_FILTER_OPTIONS: {
@@ -336,7 +336,7 @@ function AuthorCard({
 
         {/* Author info */}
         <div className="flex-1 min-w-0 py-0.5">
-          <h3 className="text-sm font-semibold font-(family-name:--font-dynapuff) text-foreground group-hover:text-primary transition-colors duration-200 truncate">
+          <h3 className="text-lg font-semibold font-pixel text-foreground group-hover:text-primary transition-colors duration-200 truncate">
             {author.name}
           </h3>
           {author.bio && (
@@ -387,7 +387,7 @@ function AuthorCardGrid({
         animate={{ opacity: 1 }}
         transition={{ delay: 0.05, duration: 0.3 }}
       >
-        <h2 className="text-xl md:text-2xl font-semibold tracking-tight font-(family-name:--font-dynapuff)">
+        <h2 className="text-2xl md:text-2xl font-semibold tracking-tight font-pixel">
           Authors found
         </h2>
         <span className="text-xs text-muted-foreground">
@@ -442,7 +442,7 @@ function EmptyState({
           <BookOpen size={24} className="text-primary/60" />
         )}
       </div>
-      <h3 className="text-lg font-semibold font-(family-name:--font-dynapuff) text-foreground/80 mb-2">
+      <h3 className="text-2xl font-semibold font-pixel text-foreground/80 mb-2">
         {query
           ? "No books found"
           : isStoreMode
@@ -542,7 +542,7 @@ function FlatShelves({
           animate={{ opacity: 1 }}
           transition={{ duration: 0.3 }}
         >
-          <h2 className="text-xl md:text-2xl font-semibold tracking-tight font-(family-name:--font-dynapuff)">
+          <h2 className="text-xl md:text-2xl font-semibold tracking-tight font-pixel">
             {shelfLabel}
           </h2>
           <span className="text-xs text-muted-foreground">
@@ -650,7 +650,7 @@ function GroupedShelves({
           >
             {/* Group header */}
             <div className="flex items-baseline justify-between mb-5">
-              <h2 className="text-xl md:text-2xl font-semibold tracking-tight font-(family-name:--font-dynapuff)">
+              <h2 className="text-xl md:text-2xl font-semibold tracking-tight font-pixel">
                 {groupName}
               </h2>
               <span className="text-xs text-muted-foreground">
@@ -711,7 +711,7 @@ function StoreResults({
           animate={{ opacity: 1 }}
           transition={{ delay: 0.05, duration: 0.3 }}
         >
-          <h2 className="text-xl md:text-2xl font-semibold tracking-tight font-(family-name:--font-dynapuff)">
+          <h2 className="text-xl md:text-2xl font-semibold tracking-tight font-pixel">
             Store results
           </h2>
           <span className="text-xs text-muted-foreground">
@@ -763,7 +763,7 @@ function StoreResults({
             animate={{ opacity: 1 }}
             transition={{ delay: 0.05, duration: 0.3 }}
           >
-            <h2 className="text-xl md:text-2xl font-semibold tracking-tight font-(family-name:--font-dynapuff)">
+            <h2 className="text-xl md:text-2xl font-semibold tracking-tight font-pixel">
               Books by author
             </h2>
             <span className="text-xs text-muted-foreground">
@@ -959,7 +959,7 @@ export default function SearchPage() {
 
   return (
     <SearchModeContext.Provider value={searchMode}>
-      <div className="max-w-5xl mx-auto">
+      <div className="max-w-5xl mx-auto z-5 relative">
         {/* Page header + Mode toggle */}
         <motion.div
           className="mb-6 md:mb-8"
@@ -973,7 +973,7 @@ export default function SearchPage() {
               <AnimatePresence mode="wait">
                 <motion.h1
                   key={searchMode}
-                  className="text-3xl md:text-4xl font-semibold tracking-tight font-(family-name:--font-dynapuff)"
+                  className="text-3xl md:text-4xl font-semibold tracking-tight font-pixel"
                   initial={{ opacity: 0, y: 6 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -6 }}
@@ -1231,7 +1231,7 @@ export default function SearchPage() {
                       animate={{ opacity: 1 }}
                       transition={{ delay: 0.05, duration: 0.3 }}
                     >
-                      <h2 className="text-xl md:text-2xl font-semibold tracking-tight font-(family-name:--font-dynapuff)">
+                      <h2 className="text-2xl md:text-3xl font-semibold tracking-tight font-pixel">
                         {showLibraryResults
                           ? hasQuery
                             ? "Search results"

@@ -130,7 +130,7 @@ export default function MainLayout({
               }}
               alt="logo"
             />
-            <span className="text-lg font-semibold tracking-tight font-(family-name:--font-dynapuff)">
+            <span className="text-2xl font-semibold tracking-tight font-pixel">
               NightOwl
             </span>
           </Link>
@@ -261,7 +261,7 @@ export default function MainLayout({
           >
             <Menu size={20} />
           </button> */}
-          <span className="text-lg flex gap-4 font-semibold font-(family-name:--font-dynapuff) tracking-tight">
+          <span className="text-2xl flex gap-4 font-semibold font-pixel tracking-tight">
             <Image
               src={"/android-chrome-512x512.png"}
               width={24}

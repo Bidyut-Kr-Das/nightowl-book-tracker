@@ -57,7 +57,6 @@ export const readingStatusLabels: Record<ReadingStatus, string> = {
   [ReadingStatus.COMPLETED]: "Completed",
   [ReadingStatus.ON_HOLD]: "On Hold",
   [ReadingStatus.DROPPED]: "Dropped",
-  [ReadingStatus.WISHLIST]: "Wishlist",
 };
 
 /** Status dot colors — reuses existing oklch palette from book-detail-modal */
@@ -90,11 +89,7 @@ export const readingStatusColors: Record<
     text: "oklch(0.60 0.15 25)",
     dot: "oklch(0.60 0.15 25)",
   },
-  [ReadingStatus.WISHLIST]: {
-    bg: "oklch(0.60 0.10 350 / 12%)",
-    text: "oklch(0.70 0.10 350)",
-    dot: "oklch(0.70 0.10 350)",
-  },
+  
 };
 
 /** Default empty form data for create mode */

@@ -132,6 +132,8 @@ model UserBook {
 
   rating Float?
 
+  tags String? @default("")
+
   book Book @relation(fields: [bookId], references: [id], onDelete: Cascade)
   user User @relation(fields: [userId], references: [id])
 
@@ -150,10 +152,17 @@ model User {
   email       String @unique
   clerkUserId String @unique
 
+  avatarId Int?
+  Avatar   AvatarImages? @relation(fields: [avatarId], references: [id])
+
   shelves UserBook[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  following      User[] @relation("UserFollows")
+  followers      User[] @relation("UserFollows")
+  
 
   @@index([clerkUserId])
 }
@@ -164,5 +173,18 @@ enum ReadingStatus {
   COMPLETED
   ON_HOLD
   DROPPED
-  WISHLIST
+  // WISHLIST
+  // OWNED
+}
+
+model AvatarImages {
+  id        Int      @id @default(autoincrement())
+  title     String?  @default("")
+  url       String
+  fileId    String?
+  metaData  Json?
+  tags      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  users     User[]
 }

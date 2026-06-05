@@ -6,8 +6,11 @@ export function getBooksByStatus({
   status,
 }: {
   books: IBook[];
-  status: ReadingStatus;
+  status: ReadingStatus | ReadingStatus[];
 }) {
+  if (Array.isArray(status)) {
+    return books.filter((b) => status.includes(b.status));
+  }
   return books.filter((book) => book.status === status);
 }
 
@@ -72,7 +75,7 @@ export function getReadingStats({ books }: { books: IBook[] }) {
     reading: reading.length,
     wishlist: getBooksByStatus({
       books: books as IBook[],
-      status: ReadingStatus.WISHLIST,
+      status: ReadingStatus.WANT_TO_READ,
     }).length,
     totalPagesRead: totalPagesRead + currentPagesRead,
     avgRating:
@@ -149,4 +152,8 @@ export function mapBooksResponse(data: any): IBook[] {
         slug: doc.slug,
       };
     });
+}
+
+export function checkTagExist(book: IBook, tag: string) {
+  return book.tags.includes(tag.toLowerCase());
 }
