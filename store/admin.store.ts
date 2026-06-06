@@ -1,5 +1,8 @@
 import { AvatarImages } from "@/lib/generated/prisma/client";
-import { getAllAvatarsAction, uploadAvatarAction } from "@/server/admin.action";
+import {
+  getAllAvatarsAction,
+  uploadAvatarAction,
+} from "@/actions/admin.action";
 import { create } from "zustand";
 
 type AdminStoreState = {

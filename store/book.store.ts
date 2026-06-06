@@ -12,7 +12,7 @@ import {
   getAllSeriesAction,
   getBookBySlugAction,
   searchBookStore,
-} from "@/server/book.action";
+} from "@/actions/book.action";
 import { CachedAuthor, CachedSeries, IBook } from "@/types/interface";
 import { create } from "zustand";
 

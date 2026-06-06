@@ -42,7 +42,7 @@ import TagInput from "./tag-input";
 import MultiSelectPills from "./multi-select-pills";
 import AuthorFormDialog from "./author-form-dialog";
 import SeriesFormDialog from "./series-form-dialog";
-import { getImageKitAuth } from "@/server/image.action";
+import { getImageKitAuth } from "@/actions/image.action";
 import { toast } from "sonner";
 import { Input } from "../neo-brutalism/input";
 import { Textarea } from "../neo-brutalism/textarea";
@@ -53,7 +53,13 @@ import {
   TabsList,
   TabsTrigger,
 } from "../neo-brutalism/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../neo-brutalism/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../neo-brutalism/select";
 
 interface BookFormProps {
   mode: "create" | "edit";
@@ -218,10 +224,16 @@ export default function BookForm({
         >
           {/* <div className="px-5 sm:px-7 pt-4 pb-0 border-b border-border shrink-0"> */}
           <TabsList className=" bg-transparent mx-2 p-1 rounded-full">
-            <TabsTrigger className="w-full h-full font-sans rounded-full" value="basic">
+            <TabsTrigger
+              className="w-full h-full font-sans rounded-full"
+              value="basic"
+            >
               Basic Info
             </TabsTrigger>
-            <TabsTrigger value="advanced" className="w-full font-sans rounded-full">
+            <TabsTrigger
+              value="advanced"
+              className="w-full font-sans rounded-full"
+            >
               Advanced
             </TabsTrigger>
           </TabsList>
@@ -303,7 +315,10 @@ export default function BookForm({
                         updateField("status", val as ReadingStatus)
                       }
                     >
-                      <SelectTrigger id="book-status" className="w-full bg-secondary-background border-2 border-border min-h-10.5 rounded-base text-foreground">
+                      <SelectTrigger
+                        id="book-status"
+                        className="w-full bg-secondary-background border-2 border-border min-h-10.5 rounded-base text-foreground"
+                      >
                         <SelectValue placeholder="Select status" />
                       </SelectTrigger>
                       <SelectContent className="bg-secondary-background">

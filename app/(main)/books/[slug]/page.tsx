@@ -36,7 +36,7 @@ import { ReadingStatus } from "@/lib/generated/prisma/enums";
 import { format } from "date-fns";
 import { BookDetailsLoading } from "./_components/book-details-loading";
 import BookFormDialog from "@/components/book-form-dialog/book-form-dialog";
-import { getSharedById } from "@/server/book.action";
+import { getSharedById } from "@/actions/book.action";
 import { Button } from "@/components/neo-brutalism/button";
 import DeleteBookButton from "@/components/delete-book-button";
 import { Badge } from "@/components/neo-brutalism/badge";

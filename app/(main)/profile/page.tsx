@@ -1,12 +1,13 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { motion } from "motion/react";
-import { BookOpen, Library, Sparkles } from "lucide-react";
-import { useUser } from "@clerk/nextjs";
+import { BookOpen, Library, Sparkles, Pencil, LogOut } from "lucide-react";
+import { SignOutButton, useUser } from "@clerk/nextjs";
 import { useBookStore } from "@/store/book.store";
+import { useUserStore } from "@/store/user.store";
 import {
   checkTagExist,
   getBooksByStatus,
@@ -15,6 +16,16 @@ import {
 import { ReadingStatus } from "@/lib/generated/prisma/enums";
 import BookShowcase from "@/components/book/book-showcase";
 import { ShelfRow } from "@/components/book-shelf-row";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/neo-brutalism/dialog";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/neo-brutalism/button";
 
 /* ═══════════════════════════════════════════════
    PROFILE PAGE — A personal reading space
@@ -27,6 +38,25 @@ const EASE = [0.23, 1, 0.32, 1] as const;
 export default function ProfilePage() {
   const { user, isLoaded: isUserLoaded } = useUser();
   const { books } = useBookStore();
+  const {
+    profile,
+    updateProfile,
+    loading: isUpdating,
+    fetchProfile,
+    avatars,
+    fetchAvatars,
+    avatarsLoading,
+  } = useUserStore();
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [editName, setEditName] = useState(profile?.name || "");
+  const [selectedAvatarId, setSelectedAvatarId] = useState<number | null>(
+    profile?.avatarId ?? null,
+  );
+  const [isAvatarPickerOpen, setIsAvatarPickerOpen] = useState(false);
+
+  useEffect(() => {
+    setSelectedAvatarId(profile?.avatarId ?? null);
+  }, [profile?.avatarId]);
 
   /* ── Derived data ── */
   const stats = useMemo(() => getReadingStats({ books }), [books]);
@@ -150,7 +180,7 @@ export default function ProfilePage() {
           transition={{ delay: 0.2, duration: 0.5, ease: EASE }}
         >
           <div
-            className="w-20 h-20 md:w-24 md:h-24 rounded-full overflow-hidden  "
+            className="w-20 h-20 md:w-24 md:h-24 rounded-full overflow-hidden border-3 border-border  "
             style={{
               boxShadow:
                 "0 4px 16px rgba(0,0,0,0.12), 0 2px 4px rgba(0,0,0,0.08)",
@@ -158,11 +188,11 @@ export default function ProfilePage() {
           >
             {isUserLoaded && user?.imageUrl ? (
               <Image
-                src={user.imageUrl}
+                src={profile?.Avatar?.url || user.imageUrl}
                 alt={displayName}
                 width={96}
                 height={96}
-                className="w-full h-full object-cover"
+                className="w-full h-full object-cover "
                 priority
               />
             ) : (
@@ -173,16 +203,30 @@ export default function ProfilePage() {
               </div>
             )}
           </div>
+          <SignOutButton>
+            <Button className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-main text-main-foreground flex items-center justify-center ">
+              <LogOut size={14} />
+            </Button>
+          </SignOutButton>
         </motion.div>
 
         {/* Name */}
         <motion.h1
-          className="text-2xl md:text-3xl font-semibold tracking-tight font-pixel"
+          className="text-2xl md:text-3xl font-semibold tracking-tight font-pixel flex gap-2"
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3, duration: 0.5, ease: EASE }}
         >
-          {displayName}
+          {displayName}{" "}
+          <Button
+            onClick={() => {
+              setEditName(profile?.name || displayName);
+              setIsEditOpen(true);
+            }}
+            className=" w-8 h-8 rounded-full bg-main text-main-foreground flex items-center justify-center"
+          >
+            <Pencil size={14} />
+          </Button>
         </motion.h1>
 
         {/* Stats badges */}
@@ -344,6 +388,164 @@ export default function ProfilePage() {
           </Link>
         </motion.div>
       )}
+
+      <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Profile</DialogTitle>
+            <DialogDescription>
+              Update your display name and avatar.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <label
+                htmlFor="name"
+                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+              >
+                Display Name
+              </label>
+              <input
+                id="name"
+                type="text"
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                className="flex h-10 w-full rounded-base border-2 border-border bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium leading-none">Avatar</label>
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-border">
+                  {selectedAvatarId &&
+                  avatars.find((a) => a.id === selectedAvatarId) ? (
+                    <Image
+                      src={
+                        avatars.find((a) => a.id === selectedAvatarId)?.url ||
+                        ""
+                      }
+                      alt="Selected avatar"
+                      width={48}
+                      height={48}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-muted flex items-center justify-center">
+                      <span className="text-sm font-medium text-muted-foreground">
+                        {editName.charAt(0).toUpperCase() || "?"}
+                      </span>
+                    </div>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsAvatarPickerOpen(true)}
+                  className="inline-flex items-center justify-center gap-2 rounded-base border-2 border-border bg-background px-3 py-2 text-sm font-medium transition-transform duration-160 hover:scale-[1.02] active:scale-[0.98]"
+                >
+                  Choose Avatar
+                </button>
+                {selectedAvatarId && (
+                  <button
+                    type="button"
+                    onClick={() => setSelectedAvatarId(null)}
+                    className="inline-flex items-center justify-center gap-2 rounded-base border-2 border-border bg-background px-3 py-2 text-sm font-medium text-muted-foreground transition-transform duration-160 hover:scale-[1.02] active:scale-[0.98]"
+                  >
+                    Remove
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <button
+              onClick={() => setIsEditOpen(false)}
+              className="inline-flex items-center justify-center gap-2 rounded-base border-2 border-border bg-background px-4 py-2 text-sm font-medium transition-transform duration-160 hover:scale-[1.02] active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={async () => {
+                await updateProfile({
+                  name: editName,
+                  avatarId: selectedAvatarId,
+                });
+                setIsEditOpen(false);
+              }}
+              disabled={isUpdating || !editName.trim()}
+              className={cn(
+                "inline-flex items-center justify-center gap-2 rounded-base bg-main px-4 py-2 text-sm font-medium text-main-foreground transition-transform duration-160 hover:scale-[1.02] active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50",
+              )}
+              style={{
+                boxShadow: "var(--shadow)",
+                border: "2px solid var(--border)",
+              }}
+            >
+              {isUpdating ? "Saving..." : "Save Changes"}
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isAvatarPickerOpen} onOpenChange={setIsAvatarPickerOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Choose Avatar</DialogTitle>
+            <DialogDescription>
+              Select an avatar from the gallery.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            {avatarsLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <span className="text-sm text-muted-foreground">
+                  Loading avatars...
+                </span>
+              </div>
+            ) : avatars.length === 0 ? (
+              <div className="flex items-center justify-center py-8">
+                <span className="text-sm text-muted-foreground">
+                  No avatars available
+                </span>
+              </div>
+            ) : (
+              <div className="grid grid-cols-4 gap-3 max-h-75 overflow-y-auto">
+                {avatars.map((avatar) => (
+                  <button
+                    key={avatar.id}
+                    type="button"
+                    onClick={() => {
+                      setSelectedAvatarId(avatar.id);
+                      setIsAvatarPickerOpen(false);
+                    }}
+                    className={cn(
+                      "relative w-full aspect-square rounded-full overflow-hidden border-2 transition-transform duration-160 hover:scale-[1.05] active:scale-[0.95]",
+                      selectedAvatarId === avatar.id
+                        ? "border-main ring-2 ring-main ring-offset-2"
+                        : "border-border hover:border-muted-foreground",
+                    )}
+                  >
+                    <Image
+                      src={avatar.url}
+                      alt={avatar.title ?? "Avatar"}
+                      fill
+                      sizes="10rem"
+                      className="object-cover"
+                    />
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <button
+              onClick={() => setIsAvatarPickerOpen(false)}
+              className="inline-flex items-center justify-center gap-2 rounded-base border-2 border-border bg-background px-4 py-2 text-sm font-medium transition-transform duration-160 hover:scale-[1.02] active:scale-[0.98]"
+            >
+              Cancel
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

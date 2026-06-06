@@ -20,6 +20,7 @@ import {
   Search,
   PlusIcon,
   Settings2,
+  User,
 } from "lucide-react";
 import Image from "next/image";
 import { useBookStore } from "@/store/book.store";
@@ -28,6 +29,7 @@ import { UserButton } from "@clerk/nextjs";
 import { Button } from "@/components/neo-brutalism/button";
 import { useTheme } from "@/components/theme-provider";
 import GridPattern from "@/components/ui/grid-pattern";
+import { useUserStore } from "@/store/user.store";
 
 const navItems = [
   { href: "/dashboard", label: "All Books", icon: Library },
@@ -54,6 +56,7 @@ export default function MainLayout({
   const { theme, setTheme, mode, toggleMode } = useTheme();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { getAllLibraryBooks, books } = useBookStore();
+  const { fetchProfile, avatars, fetchAvatars } = useUserStore();
   const [editDialogOpen, setEditDialogOpen] = useState(false);
 
   // Close sidebar on route change (mobile)
@@ -74,7 +77,13 @@ export default function MainLayout({
   useEffect(() => {
     if (!books.length) {
       (async () => {
-        await getAllLibraryBooks();
+        await Promise.all([getAllLibraryBooks(), fetchProfile()]);
+      })();
+    }
+
+    if (!avatars.length) {
+      (async () => {
+        await Promise.all([fetchAvatars()]);
       })();
     }
   }, []);
@@ -214,6 +223,21 @@ export default function MainLayout({
               strokeWidth={pathname === "/settings" ? 2.2 : 1.8}
             />
             <span>Settings</span>
+          </Link>
+          <Link
+            href="/profile"
+            className={`
+              flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm
+              transition-all duration-200 active:scale-[0.98]
+              ${
+                pathname === "/profile"
+                  ? "bg-primary/10 text-primary font-medium"
+                  : "text-muted-foreground hover:text-foreground hover:bg-accent"
+              }
+            `}
+          >
+            <User size={18} strokeWidth={pathname === "/profile" ? 2.2 : 1.8} />
+            <span>Profile</span>
           </Link>
         </nav>
 

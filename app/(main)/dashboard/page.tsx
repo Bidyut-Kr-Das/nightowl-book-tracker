@@ -90,8 +90,7 @@ export default function DashboardPage() {
       {currentlyReading.length > 0 && (
         <BookShowcase book={currentlyReading[0]} label="Currently Reading" />
       )}
-
-      <HorizontalBarChart items={topGenres} />
+      {allBooks.length > 0 && <HorizontalBarChart items={topGenres} />}
     </section>
   );
 }

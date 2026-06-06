@@ -77,6 +77,7 @@ export default function BookShowcase({
             src={book.coverImage || "/placeholder-cover.png"}
             alt={book.title}
             fill
+            sizes="14rem"
             className="object-cover rounded-xs"
             loading="eager"
             // sizes="40px"

@@ -11,9 +11,11 @@ import {
   Search,
   Settings2,
   Sun,
+  User,
 } from "lucide-react";
 import Link from "next/link";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import Image from "next/image";
 
 // import { ModeToggle } from "@/components/mode-toggle";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -26,7 +28,8 @@ import {
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { Dock, DockIcon } from "@/components/ui/dock";
-import { UserButton } from "@clerk/nextjs";
+import { useUser } from "@clerk/nextjs";
+import { useUserStore } from "@/store/user.store";
 // import { useTheme } from "@/lib/theme-provider";
 import BookFormDialog from "./book-form-dialog/book-form-dialog";
 import { useTheme } from "./theme-provider";
@@ -37,15 +40,20 @@ const DATA = {
   navbar: [
     { href: "/dashboard", icon: Library, label: "Library" },
     { href: "/dashboard/search", icon: Search, label: "Search" },
+    // { href: "/profile", icon: User, label: "Profile" },
   ],
 };
 
 export function MobileDock() {
+  const { user, isLoaded } = useUser();
+  const { profile, fetchProfile } = useUserStore();
   const { theme, toggleMode, mode } = useTheme();
   const [editDialogOpen, setEditDialogOpen] = useState(false);
 
+  
+
   return (
-    <div className="absolute bottom-5 left-0 right-0 lg:hidden text-black">
+    <div className="absolute bottom-5 left-0 right-0 lg:hidden text-black z-50">
       <TooltipProvider>
         <Dock
           direction="middle"
@@ -138,10 +146,33 @@ export function MobileDock() {
           <DockIcon>
             <Tooltip>
               <TooltipTrigger asChild>
-                <UserButton />
+                <Link
+                  href={"/profile"}
+                  aria-label={"Profile"}
+                  className={cn(
+                    buttonVariants({ variant: "ghost", size: "icon" }),
+                    "size-12 rounded-full",
+                  )}
+                >
+                  <div className="w-8 h-8 rounded-full overflow-hidden border-2 border-border">
+                    {isLoaded && user?.imageUrl ? (
+                      <Image
+                        src={profile?.Avatar?.url || user.imageUrl}
+                        alt="Profile"
+                        width={32}
+                        height={32}
+                        className="object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-muted flex items-center justify-center">
+                        <User className="size-4" />
+                      </div>
+                    )}
+                  </div>
+                </Link>
               </TooltipTrigger>
               <TooltipContent>
-                <p>user</p>
+                <p>Profile</p>
               </TooltipContent>
             </Tooltip>
           </DockIcon>

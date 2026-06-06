@@ -13,7 +13,7 @@ import {
 } from "@/components/neo-brutalism/dialog";
 import { Input } from "@/components/neo-brutalism/input";
 import { Label } from "@/components/neo-brutalism/label";
-import { getImageKitAuth } from "@/server/image.action";
+import { getImageKitAuth } from "@/actions/image.action";
 import { useAdminStore } from "@/store/admin.store";
 import { upload } from "@imagekit/next";
 import { useCallback, useState } from "react";
