@@ -488,7 +488,8 @@ export async function getBookBySlugAction(slug: string, userId?: string) {
             bookImage: true,
           },
         });
-        if (coverImage) res.coverImage = coverImage.bookImage;
+        if (coverImage && coverImage.bookImage)
+          res.coverImage = coverImage.bookImage;
       }
     }
 
