@@ -4,7 +4,14 @@ import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { motion } from "motion/react";
-import { BookOpen, Library, Sparkles, Pencil, LogOut } from "lucide-react";
+import {
+  BookOpen,
+  Library,
+  Sparkles,
+  Pencil,
+  LogOut,
+  LayoutGrid,
+} from "lucide-react";
 import { SignOutButton, useUser } from "@clerk/nextjs";
 import { useBookStore } from "@/store/book.store";
 import { useUserStore } from "@/store/user.store";
@@ -14,8 +21,9 @@ import {
   getReadingStats,
 } from "@/utils/bookUtils";
 import { ReadingStatus } from "@/lib/generated/prisma/enums";
+import { IBook } from "@/types/interface";
 import BookShowcase from "@/components/book/book-showcase";
-import { ShelfRow } from "@/components/book-shelf-row";
+import { ShelfRow, ShelfBook } from "@/components/book-shelf-row";
 import {
   Dialog,
   DialogContent,
@@ -35,6 +43,41 @@ import { Button } from "@/components/neo-brutalism/button";
 /* Easing — project standard (ease-out-quint) */
 const EASE = [0.23, 1, 0.32, 1] as const;
 
+function GridSection({
+  title,
+  books,
+  delay = 0,
+}: {
+  title: string;
+  books: IBook[];
+  delay?: number;
+}) {
+  if (books.length === 0) return null;
+
+  return (
+    <motion.section
+      className="mb-12 md:mb-16"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ delay, duration: 0.5 }}
+    >
+      <div className="flex items-baseline justify-between mb-5">
+        <h2 className="text-2xl md:text-2xl font-semibold tracking-tight font-pixel">
+          {title}
+        </h2>
+        <span className="text-xs text-muted-foreground">
+          {books.length} {books.length === 1 ? "book" : "books"}
+        </span>
+      </div>
+      <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6 md:gap-8">
+        {books.map((book, i) => (
+          <ShelfBook key={i} book={book} index={i} size="lg" />
+        ))}
+      </div>
+    </motion.section>
+  );
+}
+
 export default function ProfilePage() {
   const { user, isLoaded: isUserLoaded } = useUser();
   const { books } = useBookStore();
@@ -53,6 +96,14 @@ export default function ProfilePage() {
     profile?.avatarId ?? null,
   );
   const [isAvatarPickerOpen, setIsAvatarPickerOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<"shelf" | "grid">("shelf");
+
+  useEffect(() => {
+    const stored = localStorage.getItem("profileViewMode");
+    if (stored === "grid" || stored === "shelf") {
+      setViewMode(stored);
+    }
+  }, []);
 
   useEffect(() => {
     setSelectedAvatarId(profile?.avatarId ?? null);
@@ -339,15 +390,59 @@ export default function ProfilePage() {
           ═══════════════════════════════════ */}
       {books.length > 0 ? (
         <div className="px-4 md:px-6 lg:px-8 mt-10">
-          {shelfSections.map((section, i) => (
-            <ShelfRow
-              key={section.title}
-              title={section.title}
-              books={section.books}
-              bookSize="md"
-              delay={0.6 + i * 0.12}
-            />
-          ))}
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl md:text-2xl font-semibold tracking-tight font-pixel">
+              My Books
+            </h2>
+            <div className="flex items-center gap-1 p-1 rounded-lg bg-muted/50 border border-border">
+              <button
+                onClick={() => {
+                  setViewMode("shelf");
+                  localStorage.setItem("profileViewMode", "shelf");
+                }}
+                className={`p-2 rounded-md transition-all duration-200 ${
+                  viewMode === "shelf"
+                    ? "bg-background shadow-sm"
+                    : "hover:bg-muted"
+                }`}
+                title="Shelf view"
+              >
+                <Library size={16} />
+              </button>
+              <button
+                onClick={() => {
+                  setViewMode("grid");
+                  localStorage.setItem("profileViewMode", "grid");
+                }}
+                className={`p-2 rounded-md transition-all duration-200 ${
+                  viewMode === "grid"
+                    ? "bg-background shadow-sm"
+                    : "hover:bg-muted"
+                }`}
+                title="Grid view"
+              >
+                <LayoutGrid size={16} />
+              </button>
+            </div>
+          </div>
+          {viewMode === "shelf"
+            ? shelfSections.map((section, i) => (
+                <ShelfRow
+                  key={section.title}
+                  title={section.title}
+                  books={section.books}
+                  bookSize="md"
+                  delay={0.6 + i * 0.12}
+                />
+              ))
+            : shelfSections.map((section, i) => (
+                <GridSection
+                  key={section.title}
+                  title={section.title}
+                  books={section.books}
+                  delay={0.6 + i * 0.12}
+                />
+              ))}
         </div>
       ) : (
         /* ═══════════════════════════════════

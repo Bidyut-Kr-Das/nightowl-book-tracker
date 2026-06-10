@@ -542,10 +542,10 @@ function FlatShelves({
           animate={{ opacity: 1 }}
           transition={{ duration: 0.3 }}
         >
-          <h2 className="text-xl md:text-2xl font-semibold tracking-tight font-pixel">
+          <h2 className="text-3xl md:text-4xl font-semibold tracking-tight font-pixel">
             {shelfLabel}
           </h2>
-          <span className="text-xs text-muted-foreground">
+          <span className="text-sm text-foreground">
             {books.length} {books.length === 1 ? "book" : "books"}
           </span>
         </motion.div>
@@ -650,10 +650,10 @@ function GroupedShelves({
           >
             {/* Group header */}
             <div className="flex items-baseline justify-between mb-5">
-              <h2 className="text-xl md:text-2xl font-semibold tracking-tight font-pixel">
+              <h2 className="text-3xl md:text-4xl font-semibold tracking-tight font-pixel">
                 {groupName}
               </h2>
-              <span className="text-xs text-muted-foreground">
+              <span className="text-sm text-foreground">
                 {groupBooks.length} {groupBooks.length === 1 ? "book" : "books"}
               </span>
             </div>
