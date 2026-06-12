@@ -34,6 +34,7 @@ import { useBookStore } from "@/store/book.store";
 import { useDebounce } from "@/hooks/use-debounce";
 import type { Author } from "@/lib/generated/prisma/client";
 import { useMobile } from "@/hooks/use-mobile";
+import SearchLoading from "./loading";
 
 /* ═══════════════════════════════════════════════
    Constants & Types
@@ -937,6 +938,10 @@ export default function SearchPage() {
     setQuery(authorName);
     // The debounced effect will pick up the new query and call browseStoreAuthors
   }, []);
+
+  if (loading) {
+    return <SearchLoading />;
+  }
 
   // Auto-focus search input on mount
   // useEffect(() => {

@@ -40,6 +40,7 @@ import { getSharedById } from "@/actions/book.action";
 import { Button } from "@/components/neo-brutalism/button";
 import DeleteBookButton from "@/components/delete-book-button";
 import { Badge } from "@/components/neo-brutalism/badge";
+import BookDetailLoading from "./loading";
 // import { Button } from "@/components/ui/button";
 
 const statusDescriptions: Record<string, string> = {
@@ -102,6 +103,7 @@ export default function BookDetailPage({
     getSharedBook,
     sharedBook,
     clearStateField,
+    loading,
   } = useBookStore();
 
   useEffect(() => {
@@ -126,8 +128,8 @@ export default function BookDetailPage({
   // Spring tilt for cover — decorative mouse tracking
   const rotateY = useSpring(0, { stiffness: 120, damping: 18 });
   const rotateX = useSpring(0, { stiffness: 120, damping: 18 });
-  if (localLoading) {
-    return <BookDetailsLoading />;
+  if (localLoading || loading) {
+    return <BookDetailLoading />;
   }
   const book =
     mode === "share"
