@@ -331,14 +331,24 @@ export default function BookDetailPage({
                 {book.series[0].name}
                 {/* {book.seriesOrder && ` · Book ${book.seriesOrder}`} */}
               </span>
-              {book.indexInSeries !== null && book.indexInSeries > 0 && (
-                <>
-                  <Dot />
-                  <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground uppercase tracking-wider font-medium">
-                    BOOK {book.indexInSeries}
-                  </span>
-                </>
-              )}
+              {book.indexInSeries !== null &&
+                parseFloat(book.indexInSeries) > 0 && (
+                  <>
+                    <Dot />
+                    <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground uppercase tracking-wider font-medium">
+                      {!Number.isInteger(parseFloat(book.indexInSeries))
+                        ? "Prequel of "
+                        : ""}
+                      BOOK{" "}
+                      {Math.floor(
+                        parseFloat(book.indexInSeries) +
+                          (!Number.isInteger(parseFloat(book.indexInSeries))
+                            ? 1
+                            : 0),
+                      )}
+                    </span>
+                  </>
+                )}
             </motion.div>
           )}
 
@@ -617,7 +627,7 @@ export default function BookDetailPage({
         open={editDialogOpen}
         onOpenChange={setEditDialogOpen}
         onSubmit={(data) => {
-          console.log(data);
+          // console.log(data);
         }}
       />
     </div>

@@ -20,7 +20,7 @@ export const books: IBook[] = [
     ],
     // seriesOrder: 1,
     authors: [{ id: 0, name: "Robin Hobb", image: "", hardcoverId: NaN }],
-    indexInSeries: 0,
+    indexInSeries: "0",
     mood: ["Fantasy", "Epic Fantasy"],
     hardcoverId: NaN,
     averageRating: 4.2,
@@ -53,7 +53,7 @@ export const books: IBook[] = [
     title: "Project Hail Mary",
     series: null,
     authors: [{ id: 0, name: "Andy Weir", image: "", hardcoverId: NaN }],
-    indexInSeries: 0,
+    indexInSeries: "0",
 
     hardcoverId: NaN,
     averageRating: 4.5,
@@ -88,7 +88,7 @@ export const books: IBook[] = [
     mood: ["Fantasy", "Literary Fiction"],
     headline: "",
     pages: 250,
-    indexInSeries: 0,
+    indexInSeries: "0",
 
     createdAt: new Date("2026-04-15"),
     updatedAt: new Date("2026-05-02"),
@@ -123,7 +123,7 @@ export const books: IBook[] = [
     mood: ["Fantasy", "Epic Fantasy"],
     headline: "",
     pages: 662,
-    indexInSeries: 0,
+    indexInSeries: "0",
 
     createdAt: new Date("2026-02-20"),
     updatedAt: new Date("2026-03-20"),

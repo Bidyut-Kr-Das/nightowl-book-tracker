@@ -524,13 +524,14 @@ function FlatShelves({
   shelfLabel?: string;
 }) {
   const isMobile = useMobile();
+  // console.log(isMobile);
   const shelves = useMemo(
     () =>
       chunkArray(
         books,
         isMobile ? BOOKS_PER_SHELF_MOBILE : BOOKS_PER_SHELF_DESKTOP,
       ),
-    [books],
+    [books, isMobile],
   );
 
   return (
@@ -611,8 +612,8 @@ function GroupedShelves({
     map.forEach((groupBooks) => {
       if (groupBy === "series") {
         groupBooks.sort((a, b) => {
-          const aIndex = a.indexInSeries ?? 0;
-          const bIndex = b.indexInSeries ?? 0;
+          const aIndex = parseFloat(a.indexInSeries) ?? 0;
+          const bIndex = parseFloat(b.indexInSeries) ?? 0;
 
           // Put 0 at the end
           if (aIndex === 0 && bIndex !== 0) return 1;

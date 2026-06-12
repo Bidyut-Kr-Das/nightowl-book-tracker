@@ -45,7 +45,7 @@ export interface BookFormData {
   averageRating: number | null;
   ratingsCount: number;
   reviewsCount: number;
-  indexInSeries: number;
+  indexInSeries: string;
   tags: string[];
   // hardcoverId: number | null;
 }
@@ -113,7 +113,7 @@ export const emptyFormData: BookFormData = {
   averageRating: null,
   ratingsCount: 0,
   reviewsCount: 0,
-  indexInSeries: 0,
+  indexInSeries: "",
   tags: [],
   // hardcoverId: null,
 };

@@ -69,7 +69,7 @@ type ChartData = {
 };
 
 export default function HorizontalBarChart({ items }: { items: ChartData[] }) {
-  console.log(items);
+  // console.log(items);
   const localchartConfig = useMemo(() => {
     const config: Record<string, { label: string; color?: string }> = {
       visitors: {

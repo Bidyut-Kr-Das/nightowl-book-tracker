@@ -527,17 +527,13 @@ export default function BookForm({
                   >
                     <Input
                       id="book-index-in-series"
-                      type="number"
+                      type="text"
                       value={formData.indexInSeries || ""}
                       onChange={(e) => {
                         const raw = e.target.value;
-                        updateField(
-                          "indexInSeries",
-                          raw === "" ? 0 : parseInt(raw, 10),
-                        );
+                        updateField("indexInSeries", raw);
                       }}
                       placeholder="0"
-                      min={0}
                     />
                   </FieldWrapper>
                 </div>

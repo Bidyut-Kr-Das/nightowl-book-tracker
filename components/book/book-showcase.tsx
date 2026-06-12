@@ -42,14 +42,14 @@ export default function BookShowcase({
                 {book.series[0].name}
                 {/* {book.seriesOrder && ` · Book ${book.seriesOrder}`} */}
               </span>
-              {book.indexInSeries !== null && book.indexInSeries > 0 && (
+              {/* {book.indexInSeries !== null && parseFloat(book.indexInSeries) > 0 && (
                 <>
                   <Dot />
                   <span className="inline-flex items-center gap-1.5 text-xs  uppercase tracking-wider font-medium">
                     BOOK {book.indexInSeries}
                   </span>
                 </>
-              )}
+              )} */}
             </motion.div>
           )}
           <div className="flex flex-wrap gap-1">

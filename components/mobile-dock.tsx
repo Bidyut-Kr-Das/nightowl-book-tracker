@@ -184,7 +184,7 @@ export function MobileDock() {
         open={editDialogOpen}
         onOpenChange={setEditDialogOpen}
         onSubmit={(data) => {
-          console.log(data);
+          // console.log(data);
         }}
       />
     </div>

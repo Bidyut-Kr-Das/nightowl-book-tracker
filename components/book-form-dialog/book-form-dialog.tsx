@@ -73,7 +73,7 @@ function bookToFormData(book: IBook): Partial<BookFormData> {
     averageRating: book.averageRating ?? null,
     ratingsCount: book.ratingsCount ?? 0,
     reviewsCount: book.reviewsCount ?? 0,
-    indexInSeries: book.indexInSeries ?? 0,
+    indexInSeries: book.indexInSeries ?? "0",
     tags: book.tags ?? [],
     // hardcoverId: book.hardcoverId ?? null,
   };

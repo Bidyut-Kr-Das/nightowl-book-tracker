@@ -41,7 +41,7 @@ model Book {
   ratingsCount  Int    @default(0)
   reviewsCount  Int    @default(0)
 
-  indexInSeries Int @default(0)
+  indexInSeries String @default("0")
 
   // Categorization
 

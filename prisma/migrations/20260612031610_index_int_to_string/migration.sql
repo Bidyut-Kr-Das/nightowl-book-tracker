@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "Book" ALTER COLUMN "indexInSeries" SET DEFAULT '0',
+ALTER COLUMN "indexInSeries" SET DATA TYPE TEXT;
