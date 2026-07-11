@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { motion } from "motion/react";
 import {
   BookOpen,
@@ -11,8 +12,10 @@ import {
   Pencil,
   LogOut,
   LayoutGrid,
+  Share2,
 } from "lucide-react";
 import { SignOutButton, useUser } from "@clerk/nextjs";
+import { toast } from "sonner";
 import { useBookStore } from "@/store/book.store";
 import { useUserStore } from "@/store/user.store";
 import {
@@ -24,6 +27,7 @@ import { ReadingStatus } from "@/lib/generated/prisma/enums";
 import { IBook } from "@/types/interface";
 import BookShowcase from "@/components/book/book-showcase";
 import { ShelfRow, ShelfBook } from "@/components/book-shelf-row";
+import { SharedByContext } from "@/components/shared-by-context";
 import {
   Dialog,
   DialogContent,
@@ -34,14 +38,17 @@ import {
 } from "@/components/neo-brutalism/dialog";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/neo-brutalism/button";
+import { getUserPublicProfileAction } from "@/actions/user.action";
+import { getUserPublicBooksAction, getSharedById } from "@/actions/book.action";
 
-/* ═══════════════════════════════════════════════
-   PROFILE PAGE — A personal reading space
-   Warm, immersive, cozy digital library
-   ═══════════════════════════════════════════════ */
-
-/* Easing — project standard (ease-out-quint) */
 const EASE = [0.23, 1, 0.32, 1] as const;
+
+type PublicProfile = {
+  id: number;
+  name: string;
+  avatarId: number | null;
+  Avatar: { id: number; url: string; title: string | null } | null;
+};
 
 function GridSection({
   title,
@@ -80,6 +87,13 @@ function GridSection({
 
 export default function ProfilePage() {
   const { user, isLoaded: isUserLoaded } = useUser();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const sharedByParam = searchParams.get("sharedBy");
+
+  const isPublicView = !!sharedByParam;
+  const isOwnProfile = !isPublicView;
+
   const { books } = useBookStore();
   const {
     profile,
@@ -90,6 +104,7 @@ export default function ProfilePage() {
     fetchAvatars,
     avatarsLoading,
   } = useUserStore();
+
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [editName, setEditName] = useState(profile?.name || "");
   const [selectedAvatarId, setSelectedAvatarId] = useState<number | null>(
@@ -98,52 +113,95 @@ export default function ProfilePage() {
   const [isAvatarPickerOpen, setIsAvatarPickerOpen] = useState(false);
   const [viewMode, setViewMode] = useState<"shelf" | "grid">("shelf");
 
+  const [publicProfile, setPublicProfile] = useState<PublicProfile | null>(null);
+  const [publicBooks, setPublicBooks] = useState<IBook[]>([]);
+  const [publicLoading, setPublicLoading] = useState(true);
+  const [ownSharedBy, setOwnSharedBy] = useState<string | null>(null);
+
   useEffect(() => {
+    if (isPublicView) {
+      setPublicLoading(true);
+      Promise.all([
+        getUserPublicProfileAction(sharedByParam!),
+        getUserPublicBooksAction(sharedByParam!),
+      ])
+        .then(([profileData, booksData]) => {
+          setPublicProfile(profileData);
+          setPublicBooks(booksData);
+        })
+        .catch(() => {
+          router.push("/sign-in");
+        })
+        .finally(() => setPublicLoading(false));
+    }
+  }, [sharedByParam]);
+
+  useEffect(() => {
+    if (!isPublicView && user && !ownSharedBy) {
+      getSharedById().then((id) => {
+        if (id) setOwnSharedBy(id);
+      });
+    }
+  }, [isPublicView, user]);
+
+  useEffect(() => {
+    if (isPublicView) return;
+    if (!isUserLoaded) return;
+    if (!user) {
+      router.push("/sign-in");
+      return;
+    }
+  }, [isUserLoaded, user, isPublicView, router]);
+
+  useEffect(() => {
+    if (isPublicView) return;
     const stored = localStorage.getItem("profileViewMode");
     if (stored === "grid" || stored === "shelf") {
       setViewMode(stored);
     }
-  }, []);
+  }, [isPublicView]);
 
   useEffect(() => {
+    if (isPublicView) return;
     setSelectedAvatarId(profile?.avatarId ?? null);
-  }, [profile?.avatarId]);
+  }, [profile?.avatarId, isPublicView]);
 
-  /* ── Derived data ── */
-  const stats = useMemo(() => getReadingStats({ books }), [books]);
+  const displayBooks = isPublicView ? publicBooks : books;
+
+  const stats = useMemo(() => getReadingStats({ books: displayBooks }), [displayBooks]);
 
   const currentlyReading = useMemo(
-    () => getBooksByStatus({ books, status: ReadingStatus.READING }),
-    [books],
+    () => getBooksByStatus({ books: displayBooks, status: ReadingStatus.READING }),
+    [displayBooks],
   );
   const completed = useMemo(
-    () => getBooksByStatus({ books, status: ReadingStatus.COMPLETED }),
-    [books],
+    () => getBooksByStatus({ books: displayBooks, status: ReadingStatus.COMPLETED }),
+    [displayBooks],
   );
   const wishlist = useMemo(
-    () => getBooksByStatus({ books, status: ReadingStatus.WANT_TO_READ }),
-    [books],
+    () => getBooksByStatus({ books: displayBooks, status: ReadingStatus.WANT_TO_READ }),
+    [displayBooks],
   );
   const owned = useMemo(
-    () => books.filter((b) => checkTagExist(b, "owned")),
-    [books],
+    () => displayBooks.filter((b) => checkTagExist(b, "owned")),
+    [displayBooks],
   );
   const wantToRead = useMemo(
-    () => getBooksByStatus({ books, status: ReadingStatus.WANT_TO_READ }),
-    [books],
+    () => getBooksByStatus({ books: displayBooks, status: ReadingStatus.WANT_TO_READ }),
+    [displayBooks],
   );
   const onHold = useMemo(
-    () => getBooksByStatus({ books, status: ReadingStatus.ON_HOLD }),
-    [books],
+    () => getBooksByStatus({ books: displayBooks, status: ReadingStatus.ON_HOLD }),
+    [displayBooks],
   );
   const dropped = useMemo(
-    () => getBooksByStatus({ books, status: ReadingStatus.DROPPED }),
-    [books],
+    () => getBooksByStatus({ books: displayBooks, status: ReadingStatus.DROPPED }),
+    [displayBooks],
   );
 
   const topGenre = useMemo(() => {
     const counts: Record<string, number> = {};
-    for (const b of books || []) {
+    for (const b of displayBooks || []) {
       const genres: string[] = [];
       if (!b) continue;
       if (Array.isArray((b as any).genres)) genres.push(...(b as any).genres);
@@ -158,9 +216,8 @@ export default function ProfilePage() {
     }
     const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
     return sorted.length > 0 ? sorted[0][0] : null;
-  }, [books]);
+  }, [displayBooks]);
 
-  /* ── Shelf sections — only render non-empty ── */
   const shelfSections = useMemo(
     () =>
       [
@@ -168,27 +225,48 @@ export default function ProfilePage() {
         { title: "Completed", books: completed },
         { title: "Owned", books: owned },
         { title: "Want to Read", books: [...wantToRead, ...wishlist] },
-        // { title: "On Hold", books: onHold },
-        // { title: "Dropped", books: dropped },
       ].filter((s) => s.books.length > 0),
     [currentlyReading, completed, wishlist, wantToRead, onHold, dropped],
   );
 
-  const displayName =
-    user?.fullName || user?.firstName || user?.username || "Reader";
+  const displayName = isPublicView
+    ? publicProfile?.name || "Reader"
+    : user?.fullName || user?.firstName || user?.username || "Reader";
+
+  const displayAvatar = isPublicView
+    ? publicProfile?.Avatar?.url || null
+    : profile?.Avatar?.url || user?.imageUrl || null;
+
+  const effectiveSharedBy = sharedByParam || ownSharedBy;
+  const effectiveViewMode = isPublicView ? "grid" : viewMode;
+
+  if (isPublicView && publicLoading) {
+    return (
+      <div className="flex items-center justify-center py-32">
+        <span className="text-muted-foreground">Loading profile...</span>
+      </div>
+    );
+  }
+
+  async function shareProfileLink() {
+    const sharedById = await getSharedById();
+    if (!sharedById) {
+      toast.error("Sign in to share your profile");
+      return;
+    }
+    const url = `${window.location.origin}/profile?sharedBy=${sharedById}`;
+    navigator.clipboard.writeText(url);
+    toast.info("Profile link copied");
+  }
 
   return (
     <div className="pb-24 -mx-4 md:-mx-6 lg:-mx-8 -mt-6 lg:-mt-8">
-      {/* ═══════════════════════════════════
-          COVER BANNER
-          ═══════════════════════════════════ */}
       <motion.div
         className="relative w-full h-44 md:h-56 lg:h-64 overflow-hidden"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.6, ease: EASE }}
       >
-        {/* Banner SVG — positioned as decorative element */}
         <div className="absolute inset-0 top-0 left-0 h-44 md:h-56 lg:h-64 w-full  overflow-hidden -center">
           <Image
             src="/banner.svg"
@@ -200,7 +278,6 @@ export default function ProfilePage() {
           />
         </div>
 
-        {/* Subtle grain overlay for texture */}
         <div
           className="absolute inset-0 pointer-events-none opacity-[0.04]"
           style={{
@@ -209,7 +286,6 @@ export default function ProfilePage() {
           }}
         />
 
-        {/* Bottom fade into content area */}
         <div
           className="absolute bottom-0 left-0 right-0 h-16"
           style={{
@@ -219,11 +295,7 @@ export default function ProfilePage() {
         />
       </motion.div>
 
-      {/* ═══════════════════════════════════
-          AVATAR + PROFILE INFO
-          ═══════════════════════════════════ */}
       <div className="relative px-4 md:px-6 lg:px-8">
-        {/* Avatar — overlapping cover and content (50/50) */}
         <motion.div
           className="relative -mt-12 md:-mt-14 mb-4"
           initial={{ opacity: 0, scale: 0.9 }}
@@ -231,19 +303,19 @@ export default function ProfilePage() {
           transition={{ delay: 0.2, duration: 0.5, ease: EASE }}
         >
           <div
-            className="w-20 h-20 md:w-24 md:h-24 rounded-full overflow-hidden border-3 border-border  "
+            className="w-20 h-20 md:w-24 md:h-24 rounded-full overflow-hidden border-3 border-border"
             style={{
               boxShadow:
                 "0 4px 16px rgba(0,0,0,0.12), 0 2px 4px rgba(0,0,0,0.08)",
             }}
           >
-            {isUserLoaded && user?.imageUrl ? (
+            {displayAvatar ? (
               <Image
-                src={profile?.Avatar?.url || user.imageUrl}
+                src={displayAvatar}
                 alt={displayName}
                 width={96}
                 height={96}
-                className="w-full h-full object-cover "
+                className="w-full h-full object-cover"
                 priority
               />
             ) : (
@@ -254,14 +326,15 @@ export default function ProfilePage() {
               </div>
             )}
           </div>
-          <SignOutButton>
-            <Button className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-main text-main-foreground flex items-center justify-center ">
-              <LogOut size={14} />
-            </Button>
-          </SignOutButton>
+          {isOwnProfile && (
+            <SignOutButton>
+              <Button className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-main text-main-foreground flex items-center justify-center">
+                <LogOut size={14} />
+              </Button>
+            </SignOutButton>
+          )}
         </motion.div>
 
-        {/* Name */}
         <motion.h1
           className="text-2xl md:text-3xl font-semibold tracking-tight font-pixel flex gap-2"
           initial={{ opacity: 0, y: 8 }}
@@ -269,25 +342,34 @@ export default function ProfilePage() {
           transition={{ delay: 0.3, duration: 0.5, ease: EASE }}
         >
           {displayName}{" "}
-          <Button
-            onClick={() => {
-              setEditName(profile?.name || displayName);
-              setIsEditOpen(true);
-            }}
-            className=" w-8 h-8 rounded-full bg-main text-main-foreground flex items-center justify-center"
-          >
-            <Pencil size={14} />
-          </Button>
+          {isOwnProfile && (
+            <>
+              <Button
+                onClick={() => {
+                  setEditName(profile?.name || displayName);
+                  setIsEditOpen(true);
+                }}
+                className="w-8 h-8 rounded-full bg-main text-main-foreground flex items-center justify-center"
+              >
+                <Pencil size={14} />
+              </Button>
+              <button
+                onClick={shareProfileLink}
+                className="w-10 h-10 rounded-full border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:border-foreground/20 transition-all duration-200 active:scale-95 cursor-pointer"
+                title="Share Profile"
+              >
+                <Share2 size={16} />
+              </button>
+            </>
+          )}
         </motion.h1>
 
-        {/* Stats badges */}
         <motion.div
           className="flex flex-wrap items-center gap-3 mt-3"
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4, duration: 0.5, ease: EASE }}
         >
-          {/* Book count */}
           <div
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm"
             style={{
@@ -297,14 +379,13 @@ export default function ProfilePage() {
           >
             <Library size={13} className="text-main" />
             <span className="text-foreground font-medium tabular-nums">
-              {books.length}
+              {displayBooks.length}
             </span>
             <span className="text-muted-foreground">
-              {books.length === 1 ? "book" : "books"}
+              {displayBooks.length === 1 ? "book" : "books"}
             </span>
           </div>
 
-          {/* Top genre */}
           {topGenre && (
             <div
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm"
@@ -319,7 +400,6 @@ export default function ProfilePage() {
             </div>
           )}
 
-          {/* Currently reading count */}
           {currentlyReading.length > 0 && (
             <div
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm"
@@ -335,312 +415,302 @@ export default function ProfilePage() {
               <span className="text-muted-foreground">reading now</span>
             </div>
           )}
+
         </motion.div>
       </div>
 
-      {/* ═══════════════════════════════════
-          CURRENTLY READING SHOWCASE
-          ═══════════════════════════════════ */}
-      <div className="px-4 md:px-6 lg:px-8 mt-10">
-        {currentlyReading.length > 0 ? (
+      <SharedByContext.Provider value={effectiveSharedBy}>
+        <div className="px-4 md:px-6 lg:px-8 mt-10">
+          {currentlyReading.length > 0 ? (
+            <motion.div
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.5, duration: 0.5, ease: EASE }}
+            >
+              <BookShowcase
+                book={currentlyReading[0]}
+                label="Currently Reading"
+                sharedBy={effectiveSharedBy}
+              />
+            </motion.div>
+          ) : displayBooks.length > 0 ? (
+            <motion.div
+              className="flex items-center gap-3 py-6 px-5 rounded-xl"
+              style={{
+                background: "oklch(from var(--main) l c h / 4%)",
+                border: "1px solid oklch(from var(--main) l c h / 8%)",
+              }}
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.5, duration: 0.5, ease: EASE }}
+            >
+              <div
+                className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
+                style={{
+                  background: "oklch(from var(--main) l c h / 10%)",
+                }}
+              >
+                <BookOpen size={18} className="text-main" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-foreground">
+                  No book in progress
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Pick up a book from your shelves to start reading
+                </p>
+              </div>
+            </motion.div>
+          ) : null}
+        </div>
+
+        {displayBooks.length > 0 ? (
+          <div className="px-4 md:px-6 lg:px-8 mt-10">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl md:text-2xl font-semibold tracking-tight font-pixel">
+                {isPublicView ? "Books" : "My Books"}
+              </h2>
+              {isOwnProfile && (
+                <div className="flex items-center gap-1 p-1 rounded-lg bg-muted/50 border border-border">
+                  <button
+                    onClick={() => {
+                      setViewMode("shelf");
+                      localStorage.setItem("profileViewMode", "shelf");
+                    }}
+                    className={`p-2 rounded-md transition-all duration-200 ${
+                    effectiveViewMode === "shelf"
+                        ? "bg-background shadow-sm"
+                        : "hover:bg-muted"
+                    }`}
+                    title="Shelf view"
+                  >
+                    <Library size={16} />
+                  </button>
+                  <button
+                    onClick={() => {
+                      setViewMode("grid");
+                      localStorage.setItem("profileViewMode", "grid");
+                    }}
+                    className={`p-2 rounded-md transition-all duration-200 ${
+                      effectiveViewMode === "grid"
+                        ? "bg-background shadow-sm"
+                        : "hover:bg-muted"
+                    }`}
+                    title="Grid view"
+                  >
+                    <LayoutGrid size={16} />
+                  </button>
+                </div>
+              )}
+            </div>
+            {effectiveViewMode === "shelf"
+              ? shelfSections.map((section, i) => (
+                  <ShelfRow
+                    key={section.title}
+                    title={section.title}
+                    books={section.books}
+                    bookSize="md"
+                    delay={0.6 + i * 0.12}
+                  />
+                ))
+              : shelfSections.map((section, i) => (
+                  <GridSection
+                    key={section.title}
+                    title={section.title}
+                    books={section.books}
+                    delay={0.6 + i * 0.12}
+                  />
+                ))}
+          </div>
+        ) : isOwnProfile ? (
           <motion.div
-            initial={{ opacity: 0, y: 12 }}
+            className="flex flex-col items-center justify-center text-center py-24 px-6"
+            initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.5, duration: 0.5, ease: EASE }}
-          >
-            <BookShowcase
-              book={currentlyReading[0]}
-              label="Currently Reading"
-            />
-          </motion.div>
-        ) : books.length > 0 ? (
-          /* Empty currently reading — but user has books */
-          <motion.div
-            className="flex items-center gap-3 py-6 px-5 rounded-xl"
-            style={{
-              background: "oklch(from var(--main) l c h / 4%)",
-              border: "1px solid oklch(from var(--main) l c h / 8%)",
-            }}
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.5, duration: 0.5, ease: EASE }}
+            transition={{ delay: 0.5, duration: 0.6, ease: EASE }}
           >
             <div
-              className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
+              className="w-16 h-16 rounded-2xl flex items-center justify-center mb-5"
               style={{
-                background: "oklch(from var(--main) l c h / 10%)",
+                background: "oklch(from var(--main) l c h / 8%)",
+                border: "1px solid oklch(from var(--main) l c h / 12%)",
               }}
             >
-              <BookOpen size={18} className="text-main" />
+              <Library size={28} className="text-main" />
             </div>
-            <div>
-              <p className="text-sm font-medium text-foreground">
-                No book in progress
-              </p>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                Pick up a book from your shelves to start reading
-              </p>
-            </div>
-          </motion.div>
-        ) : null}
-      </div>
-
-      {/* ═══════════════════════════════════
-          BOOK SHELVES BY STATUS
-          ═══════════════════════════════════ */}
-      {books.length > 0 ? (
-        <div className="px-4 md:px-6 lg:px-8 mt-10">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl md:text-2xl font-semibold tracking-tight font-pixel">
-              My Books
+            <h2 className="text-2xl font-semibold tracking-tight font-pixel mb-2">
+              Your library is empty
             </h2>
-            <div className="flex items-center gap-1 p-1 rounded-lg bg-muted/50 border border-border">
-              <button
-                onClick={() => {
-                  setViewMode("shelf");
-                  localStorage.setItem("profileViewMode", "shelf");
-                }}
-                className={`p-2 rounded-md transition-all duration-200 ${
-                  viewMode === "shelf"
-                    ? "bg-background shadow-sm"
-                    : "hover:bg-muted"
-                }`}
-                title="Shelf view"
-              >
-                <Library size={16} />
-              </button>
-              <button
-                onClick={() => {
-                  setViewMode("grid");
-                  localStorage.setItem("profileViewMode", "grid");
-                }}
-                className={`p-2 rounded-md transition-all duration-200 ${
-                  viewMode === "grid"
-                    ? "bg-background shadow-sm"
-                    : "hover:bg-muted"
-                }`}
-                title="Grid view"
-              >
-                <LayoutGrid size={16} />
-              </button>
-            </div>
-          </div>
-          {viewMode === "shelf"
-            ? shelfSections.map((section, i) => (
-                <ShelfRow
-                  key={section.title}
-                  title={section.title}
-                  books={section.books}
-                  bookSize="md"
-                  delay={0.6 + i * 0.12}
-                />
-              ))
-            : shelfSections.map((section, i) => (
-                <GridSection
-                  key={section.title}
-                  title={section.title}
-                  books={section.books}
-                  delay={0.6 + i * 0.12}
-                />
-              ))}
-        </div>
-      ) : (
-        /* ═══════════════════════════════════
-           EMPTY LIBRARY STATE
-           ═══════════════════════════════════ */
-        <motion.div
-          className="flex flex-col items-center justify-center text-center py-24 px-6"
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5, duration: 0.6, ease: EASE }}
-        >
-          <div
-            className="w-16 h-16 rounded-2xl flex items-center justify-center mb-5"
-            style={{
-              background: "oklch(from var(--main) l c h / 8%)",
-              border: "1px solid oklch(from var(--main) l c h / 12%)",
-            }}
-          >
-            <Library size={28} className="text-main" />
-          </div>
-          <h2 className="text-2xl font-semibold tracking-tight font-pixel mb-2">
-            Your library is empty
-          </h2>
-          <p className="text-sm text-muted-foreground max-w-xs leading-relaxed mb-6">
-            Start building your personal collection. Search for books and add
-            them to your shelves.
-          </p>
-          <Link
-            href="/dashboard/search"
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium bg-main text-main-foreground transition-transform duration-160 active:scale-[0.97]"
-            style={{
-              boxShadow: "var(--shadow)",
-              border: "2px solid var(--border)",
-            }}
-          >
-            <BookOpen size={15} />
-            Browse Books
-          </Link>
-        </motion.div>
-      )}
-
-      <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Edit Profile</DialogTitle>
-            <DialogDescription>
-              Update your display name and avatar.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <label
-                htmlFor="name"
-                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-              >
-                Display Name
-              </label>
-              <input
-                id="name"
-                type="text"
-                value={editName}
-                onChange={(e) => setEditName(e.target.value)}
-                className="flex h-10 w-full rounded-base border-2 border-border bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium leading-none">Avatar</label>
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-border">
-                  {selectedAvatarId &&
-                  avatars.find((a) => a.id === selectedAvatarId) ? (
-                    <Image
-                      src={
-                        avatars.find((a) => a.id === selectedAvatarId)?.url ||
-                        ""
-                      }
-                      alt="Selected avatar"
-                      width={48}
-                      height={48}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full bg-muted flex items-center justify-center">
-                      <span className="text-sm font-medium text-muted-foreground">
-                        {editName.charAt(0).toUpperCase() || "?"}
-                      </span>
-                    </div>
-                  )}
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setIsAvatarPickerOpen(true)}
-                  className="inline-flex items-center justify-center gap-2 rounded-base border-2 border-border bg-background px-3 py-2 text-sm font-medium transition-transform duration-160 hover:scale-[1.02] active:scale-[0.98]"
-                >
-                  Choose Avatar
-                </button>
-                {selectedAvatarId && (
-                  <button
-                    type="button"
-                    onClick={() => setSelectedAvatarId(null)}
-                    className="inline-flex items-center justify-center gap-2 rounded-base border-2 border-border bg-background px-3 py-2 text-sm font-medium text-muted-foreground transition-transform duration-160 hover:scale-[1.02] active:scale-[0.98]"
-                  >
-                    Remove
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <button
-              onClick={() => setIsEditOpen(false)}
-              className="inline-flex items-center justify-center gap-2 rounded-base border-2 border-border bg-background px-4 py-2 text-sm font-medium transition-transform duration-160 hover:scale-[1.02] active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={async () => {
-                await updateProfile({
-                  name: editName,
-                  avatarId: selectedAvatarId,
-                });
-                setIsEditOpen(false);
-              }}
-              disabled={isUpdating || !editName.trim()}
-              className={cn(
-                "inline-flex items-center justify-center gap-2 rounded-base bg-main px-4 py-2 text-sm font-medium text-main-foreground transition-transform duration-160 hover:scale-[1.02] active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50",
-              )}
+            <p className="text-sm text-muted-foreground max-w-xs leading-relaxed mb-6">
+              Start building your personal collection. Search for books and add
+              them to your shelves.
+            </p>
+            <Link
+              href="/dashboard/search"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium bg-main text-main-foreground transition-transform duration-160 active:scale-[0.97]"
               style={{
                 boxShadow: "var(--shadow)",
                 border: "2px solid var(--border)",
               }}
             >
-              {isUpdating ? "Saving..." : "Save Changes"}
-            </button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+              <BookOpen size={15} />
+              Browse Books
+            </Link>
+          </motion.div>
+        ) : null}
+      </SharedByContext.Provider>
 
-      <Dialog open={isAvatarPickerOpen} onOpenChange={setIsAvatarPickerOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Choose Avatar</DialogTitle>
-            <DialogDescription>
-              Select an avatar from the gallery.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-4">
-            {avatarsLoading ? (
-              <div className="flex items-center justify-center py-8">
-                <span className="text-sm text-muted-foreground">
-                  Loading avatars...
-                </span>
-              </div>
-            ) : avatars.length === 0 ? (
-              <div className="flex items-center justify-center py-8">
-                <span className="text-sm text-muted-foreground">
-                  No avatars available
-                </span>
-              </div>
-            ) : (
-              <div className="grid grid-cols-4 gap-3 max-h-75 overflow-y-auto">
-                {avatars.map((avatar) => (
-                  <button
-                    key={avatar.id}
-                    type="button"
-                    onClick={() => {
-                      setSelectedAvatarId(avatar.id);
-                      setIsAvatarPickerOpen(false);
-                    }}
-                    className={cn(
-                      "relative w-full aspect-square rounded-full overflow-hidden border-2 transition-transform duration-160 hover:scale-[1.05] active:scale-[0.95]",
-                      selectedAvatarId === avatar.id
-                        ? "border-main ring-2 ring-main ring-offset-2"
-                        : "border-border hover:border-muted-foreground",
+      {isOwnProfile && (
+        <>
+          <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Edit Profile</DialogTitle>
+                <DialogDescription>
+                  Update your display name and avatar.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <label htmlFor="name" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                    Display Name
+                  </label>
+                  <input
+                    id="name"
+                    type="text"
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                    className="flex h-10 w-full rounded-base border-2 border-border bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium leading-none">Avatar</label>
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-border">
+                      {selectedAvatarId &&
+                      avatars.find((a) => a.id === selectedAvatarId) ? (
+                        <Image
+                          src={avatars.find((a) => a.id === selectedAvatarId)?.url || ""}
+                          alt="Selected avatar"
+                          width={48}
+                          height={48}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-muted flex items-center justify-center">
+                          <span className="text-sm font-medium text-muted-foreground">
+                            {editName.charAt(0).toUpperCase() || "?"}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setIsAvatarPickerOpen(true)}
+                      className="inline-flex items-center justify-center gap-2 rounded-base border-2 border-border bg-background px-3 py-2 text-sm font-medium transition-transform duration-160 hover:scale-[1.02] active:scale-[0.98]"
+                    >
+                      Choose Avatar
+                    </button>
+                    {selectedAvatarId && (
+                      <button
+                        type="button"
+                        onClick={() => setSelectedAvatarId(null)}
+                        className="inline-flex items-center justify-center gap-2 rounded-base border-2 border-border bg-background px-3 py-2 text-sm font-medium text-muted-foreground transition-transform duration-160 hover:scale-[1.02] active:scale-[0.98]"
+                      >
+                        Remove
+                      </button>
                     )}
-                  >
-                    <Image
-                      src={avatar.url}
-                      alt={avatar.title ?? "Avatar"}
-                      fill
-                      sizes="10rem"
-                      className="object-cover"
-                    />
-                  </button>
-                ))}
+                  </div>
+                </div>
               </div>
-            )}
-          </div>
-          <DialogFooter>
-            <button
-              onClick={() => setIsAvatarPickerOpen(false)}
-              className="inline-flex items-center justify-center gap-2 rounded-base border-2 border-border bg-background px-4 py-2 text-sm font-medium transition-transform duration-160 hover:scale-[1.02] active:scale-[0.98]"
-            >
-              Cancel
-            </button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+              <DialogFooter>
+                <button
+                  onClick={() => setIsEditOpen(false)}
+                  className="inline-flex items-center justify-center gap-2 rounded-base border-2 border-border bg-background px-4 py-2 text-sm font-medium transition-transform duration-160 hover:scale-[1.02] active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={async () => {
+                    await updateProfile({
+                      name: editName,
+                      avatarId: selectedAvatarId,
+                    });
+                    setIsEditOpen(false);
+                  }}
+                  disabled={isUpdating || !editName.trim()}
+                  className={cn(
+                    "inline-flex items-center justify-center gap-2 rounded-base bg-main px-4 py-2 text-sm font-medium text-main-foreground transition-transform duration-160 hover:scale-[1.02] active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50",
+                  )}
+                  style={{
+                    boxShadow: "var(--shadow)",
+                    border: "2px solid var(--border)",
+                  }}
+                >
+                  {isUpdating ? "Saving..." : "Save Changes"}
+                </button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          <Dialog open={isAvatarPickerOpen} onOpenChange={setIsAvatarPickerOpen}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Choose Avatar</DialogTitle>
+                <DialogDescription>
+                  Select an avatar from the gallery.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="py-4">
+                {avatarsLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <span className="text-sm text-muted-foreground">Loading avatars...</span>
+                  </div>
+                ) : avatars.length === 0 ? (
+                  <div className="flex items-center justify-center py-8">
+                    <span className="text-sm text-muted-foreground">No avatars available</span>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-4 gap-3 max-h-75 overflow-y-auto">
+                    {avatars.map((avatar) => (
+                      <button
+                        key={avatar.id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedAvatarId(avatar.id);
+                          setIsAvatarPickerOpen(false);
+                        }}
+                        className={cn(
+                          "relative w-full aspect-square rounded-full overflow-hidden border-2 transition-transform duration-160 hover:scale-[1.05] active:scale-[0.95]",
+                          selectedAvatarId === avatar.id
+                            ? "border-main ring-2 ring-main ring-offset-2"
+                            : "border-border hover:border-muted-foreground",
+                        )}
+                      >
+                        <Image
+                          src={avatar.url}
+                          alt={avatar.title ?? "Avatar"}
+                          fill
+                          sizes="10rem"
+                          className="object-cover"
+                        />
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <DialogFooter>
+                <button
+                  onClick={() => setIsAvatarPickerOpen(false)}
+                  className="inline-flex items-center justify-center gap-2 rounded-base border-2 border-border bg-background px-4 py-2 text-sm font-medium transition-transform duration-160 hover:scale-[1.02] active:scale-[0.98]"
+                >
+                  Cancel
+                </button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </>
+      )}
     </div>
   );
 }

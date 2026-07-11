@@ -27,6 +27,7 @@ import {
   Trash2Icon,
   TrashIcon,
 } from "lucide-react";
+import { useUser } from "@clerk/nextjs";
 // import { getBookById, books, type Book } from "@/lib/books-data";
 import { useTheme } from "@/lib/theme-provider";
 import { IBook } from "@/types/interface";
@@ -94,6 +95,7 @@ export default function BookDetailPage({
   const mode = searchParams.get("mode");
   const sharedBy = searchParams.get("sharedBy");
   const router = useRouter();
+  const { isSignedIn } = useUser();
   const [localLoading, setLocalLoading] = useState(true);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const {
@@ -197,7 +199,16 @@ export default function BookDetailPage({
     rotateX.set(0);
   }
 
+  function requireAuth() {
+    if (!isSignedIn) {
+      router.push("/sign-in");
+      return false;
+    }
+    return true;
+  }
+
   function performAction(): void {
+    if (!requireAuth()) return;
     if (book && mode === "store") {
       toast.promise(
         addBookToLibrary({
@@ -440,6 +451,7 @@ export default function BookDetailPage({
             <button
               className="w-10 h-10 rounded-full border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:border-foreground/20 transition-all duration-200 active:scale-95"
               title="Favourite"
+              onClick={() => requireAuth()}
             >
               <Heart size={16} />
             </button>
@@ -459,7 +471,7 @@ export default function BookDetailPage({
                 <Share2 size={16} />
               </button>
             )}
-            {(!mode || mode === "library") && (
+            {(!mode || mode === "library") && isSignedIn && (
               <DeleteBookButton item={book}>
                 <Button
                   className="w-10 theme-red h-10 rounded-full border-2 border-border flex items-center justify-center  cursor-pointer"

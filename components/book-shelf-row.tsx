@@ -5,6 +5,7 @@ import Link from "next/link";
 import { motion, useMotionValue, useSpring } from "motion/react";
 import { IBook } from "@/types/interface";
 import { SearchModeContext } from "@/app/(main)/dashboard/search/page";
+import { SharedByContext } from "@/components/shared-by-context";
 // import {
 //   type Book
 // } from "@/lib/books-data";
@@ -23,6 +24,7 @@ export function ShelfBook({
   size?: "sm" | "md" | "lg";
 }) {
   const searchMode = useContext(SearchModeContext);
+  const sharedBy = useContext(SharedByContext);
   const ref = useRef<HTMLDivElement>(null);
 
   // Spring-based tilt — decorative, so spring is appropriate (per design-eng skill)
@@ -72,7 +74,13 @@ export function ShelfBook({
       }}
     >
       <Link
-        href={`/books/${book.slug}${searchMode === "store" ? "?mode=store" : ""}`}
+        href={`/books/${book.slug}${
+          searchMode === "store"
+            ? "?mode=store"
+            : sharedBy
+              ? `?mode=share&sharedBy=${sharedBy}`
+              : ""
+        }`}
         className="block group outline-none"
       >
         <motion.div

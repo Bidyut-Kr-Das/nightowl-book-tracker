@@ -26,6 +26,61 @@ import { gql } from "graphql-request";
 import { BookImage } from "lucide-react";
 import { deleteImageFromImagekit } from "./image.action";
 
+export async function getUserPublicBooksAction(sharedBy: string) {
+  try {
+    const ids = hashids.decode(sharedBy);
+    if (!ids.length) {
+      throw new Error("Invalid sharedBy token");
+    }
+    const userId = ids[0] as unknown as number;
+    const result = await prisma.userBook.findMany({
+      where: { userId },
+      include: {
+        book: {
+          include: {
+            series: {
+              select: {
+                id: true,
+                name: true,
+                hardcoverId: true,
+                description: true,
+              },
+            },
+            authors: {
+              select: {
+                id: true,
+                name: true,
+                image: true,
+                hardcoverId: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: {
+        book: {
+          createdAt: "desc",
+        },
+      },
+    });
+
+    const normalised: IBook[] = result.map((ub) => {
+      return {
+        ...ub.book,
+        ...(ub.bookImage ? { coverImage: ub.bookImage } : {}),
+        addedAt: ub.createdAt,
+        progress: ub.progress,
+        status: ub.status,
+      };
+    });
+
+    return normalised;
+  } catch (error) {
+    console.error("Error fetching public books:", error);
+    throw error;
+  }
+}
+
 export async function getAllBooks() {
   try {
     const user = await currentUser();

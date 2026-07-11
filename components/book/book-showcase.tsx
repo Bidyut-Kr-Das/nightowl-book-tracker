@@ -9,6 +9,7 @@ import {
 } from "@/components/neo-brutalism/card";
 import { IBook } from "@/types/interface";
 import Image from "next/image";
+import Link from "next/link";
 import { motion } from "motion/react";
 import { Dot, Hash, Layers } from "lucide-react";
 import { Badge } from "../neo-brutalism/badge";
@@ -18,11 +19,13 @@ import { Badge } from "../neo-brutalism/badge";
 export default function BookShowcase({
   book,
   label,
+  sharedBy,
 }: {
   book: IBook;
   label: string;
+  sharedBy?: string | null;
 }) {
-  return (
+  const content = (
     <Card className="w-full bg-main relative max-w-sm h-36 py-2">
       <CardHeader className="ml-26 flex flex-col -gap-2 text-black">
         <CardTitle className="font-semibold text-black font-pixel text-2xl tracking-wide">
@@ -86,4 +89,17 @@ export default function BookShowcase({
       </CardContent>
     </Card>
   );
+
+  if (sharedBy) {
+    return (
+      <Link
+        href={`/books/${book.slug}?mode=share&sharedBy=${sharedBy}`}
+        className="block"
+      >
+        {content}
+      </Link>
+    );
+  }
+
+  return content;
 }
