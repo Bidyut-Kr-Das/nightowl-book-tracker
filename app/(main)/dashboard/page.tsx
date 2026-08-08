@@ -34,7 +34,7 @@ function GridSection({
       transition={{ delay, duration: 0.5 }}
     >
       <div className="flex items-baseline justify-between mb-5">
-        <h2 className="text-3xl md:text-3xl font-semibold tracking-tight font-pixel">
+        <h2 className="text-3xl md:text-3 xl font-semibold tracking-tight font-pixel">
           {title}
         </h2>
         <span className="text-xs text-muted-foreground">
